@@ -8,23 +8,36 @@ from __future__ import annotations
 
 import logging
 import time
-from ctypes import windll
-
 import pyautogui
-import win32api
-import win32com.client
-import win32con
-import win32gui
-import win32process
-import win32ui
 from PIL import Image
 
+from tether.platform.capabilities import CAPABILITIES, UnsupportedOnThisPlatform
+
 log = logging.getLogger(__name__)
+
+# Imported only where they exist. Everything below raises a clear error on
+# other platforms instead of failing at import time and taking the whole
+# bot down when the monitoring half would have worked fine.
+if CAPABILITIES.window_control:
+    from ctypes import windll
+
+    import win32api
+    import win32com.client
+    import win32con
+    import win32gui
+    import win32process
+    import win32ui
+
+
+def _require_windows(feature: str) -> None:
+    if not CAPABILITIES.window_control:
+        raise UnsupportedOnThisPlatform(feature)
 
 
 def find_window_by_keyword(keyword: str) -> int | None:
     """Picks the largest-area match — emulator/tool windows often have a side
     toolbar that also matches the keyword; the real device screen is bigger."""
+    _require_windows("Finding a window")
     matches: list[int] = []
 
     def _enum_handler(hwnd, _):
@@ -50,6 +63,7 @@ def focus_window(hwnd, retries: int = 4) -> bool:
     SetForegroundWindow can fail silently (Windows blocks background processes
     from stealing focus) — every caller must check the return value and abort
     rather than send input on a False."""
+    _require_windows("Focusing a window")
     for _ in range(retries):
         if win32gui.IsIconic(hwnd):
             win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
@@ -94,6 +108,7 @@ def focus_window(hwnd, retries: int = 4) -> bool:
 def capture_window(hwnd) -> Image.Image:
     """Grab window's own buffer via PrintWindow — correct even if another
     window overlaps it on screen."""
+    _require_windows("Capturing a window")
     if win32gui.IsIconic(hwnd):
         win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
         pyautogui.sleep(0.2)

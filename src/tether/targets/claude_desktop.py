@@ -23,10 +23,13 @@ import time
 import pyautogui
 import pyperclip
 import pytesseract
-import win32gui
 from PIL import Image
 
 from tether.platform import uia
+from tether.platform.capabilities import CAPABILITIES
+
+if CAPABILITIES.window_control:
+    import win32gui
 from tether.platform.ocr import find_input_box_anchor, ocr_find_word, ocr_text
 from tether.platform.window import capture_window, find_window_by_keyword, focus_window
 from tether.targets.base import Dialog, PasteResult, Session, TargetStatus
@@ -49,9 +52,13 @@ class ClaudeDesktopTarget:
     # ---- basics ----
 
     def _hwnd(self):
+        if not CAPABILITIES.window_control:
+            return None
         return find_window_by_keyword(self.window_keyword)
 
     def is_available(self) -> bool:
+        if not CAPABILITIES.window_control:
+            return False
         return self._hwnd() is not None
 
     def focus(self) -> bool:
@@ -193,6 +200,9 @@ class ClaudeDesktopTarget:
     # asyncio.to_thread's general pool threads).
 
     def list_sessions(self) -> list[Session]:
+        if not CAPABILITIES.accessibility:
+            return []
+
         def _work():
             win = uia.find_root_window(self.window_keyword)
             if not win:
@@ -203,6 +213,9 @@ class ClaudeDesktopTarget:
         return uia.run_on_uia_thread(_work)
 
     def switch_session(self, name: str) -> bool:
+        if not CAPABILITIES.accessibility:
+            return False
+
         def _work():
             win = uia.find_root_window(self.window_keyword)
             if not win:
@@ -223,6 +236,9 @@ class ClaudeDesktopTarget:
     # ---- dialogs (UIA) ----
 
     def detect_dialogs(self) -> list[Dialog]:
+        if not CAPABILITIES.accessibility:
+            return []
+
         def _work():
             win = uia.find_root_window(self.window_keyword)
             if not win:

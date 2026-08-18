@@ -12,26 +12,40 @@ import asyncio
 import os
 import subprocess
 
+from tether.platform.capabilities import CAPABILITIES
+
 _shell_cwd = os.path.expanduser("~")
+
+# CREATE_NO_WINDOW only exists on Windows; passing it elsewhere raises.
+_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 
 async def run_cmd(command: str, timeout: int = 60) -> str:
     global _shell_cwd
-    # PowerShell escapes a single quote inside a single-quoted string by
-    # doubling it. Without this, any directory with an apostrophe in the
-    # name breaks the generated script.
-    safe_cwd = _shell_cwd.replace("'", "''")
-    script = (
-        "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
-        f"Set-Location -LiteralPath '{safe_cwd}'; "
-        f"{command}; "
-        'Write-Output "___CWD___$((Get-Location).Path)"'
-    )
+    if CAPABILITIES.window_control:  # Windows
+        # PowerShell escapes a single quote inside a single-quoted string by
+        # doubling it. Without this, any directory with an apostrophe in the
+        # name breaks the generated script.
+        safe_cwd = _shell_cwd.replace("'", "''")
+        script = (
+            "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
+            f"Set-Location -LiteralPath '{safe_cwd}'; "
+            f"{command}; "
+            'Write-Output "___CWD___$((Get-Location).Path)"'
+        )
+        argv = ["powershell", "-NoLogo", "-NoProfile", "-Command", script]
+    else:
+        # POSIX shells take the same approach: single quotes, with embedded
+        # quotes closed and re-opened.
+        safe_cwd = _shell_cwd.replace("'", "'\''")
+        script = f"cd '{safe_cwd}' && {command}; printf '___CWD___%s\n' \"$(pwd)\""
+        argv = ["/bin/sh", "-c", script]
+
     proc = await asyncio.create_subprocess_exec(
-        "powershell", "-NoLogo", "-NoProfile", "-Command", script,
+        *argv,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.STDOUT,
-        creationflags=subprocess.CREATE_NO_WINDOW,
+        creationflags=_NO_WINDOW,
     )
     try:
         stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=timeout)

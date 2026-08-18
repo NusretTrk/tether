@@ -9,6 +9,7 @@ from telegram import BotCommand
 from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, CommandHandler, MessageHandler, filters
 
 from tether.config import Config
+from tether.platform.capabilities import CAPABILITIES, platform_name
 from tether.logsetup import setup_logging
 from tether.transport import handlers
 from tether.transport.callbacks import handle_callback
@@ -76,8 +77,14 @@ def _build_app(config: Config) -> Application:
     app.job_queue.run_repeating(transcript_job, interval=settings.transcript_poll_interval_sec, first=5)
     app.job_queue.run_repeating(usage_limit_job, interval=settings.usage_limit_check_interval_sec, first=20)
     app.job_queue.run_repeating(temp_monitor_job, interval=settings.temp_check_interval_sec, first=10)
-    app.job_queue.run_repeating(activity_job, interval=settings.uia_poll_interval_sec, first=15)
-    app.job_queue.run_repeating(dialog_job, interval=settings.uia_poll_interval_sec, first=15)
+    # Session and dialog watching read the OS accessibility tree, which only
+    # the Windows implementation provides. Scheduling them elsewhere would
+    # just log a failure every few seconds.
+    if CAPABILITIES.accessibility:
+        app.job_queue.run_repeating(activity_job, interval=settings.uia_poll_interval_sec, first=15)
+        app.job_queue.run_repeating(dialog_job, interval=settings.uia_poll_interval_sec, first=15)
+    else:
+        log.info("accessibility features unavailable on %s - session and dialog watchers disabled", platform_name())
     app.job_queue.run_repeating(stall_job, interval=15, first=30)
 
     return app

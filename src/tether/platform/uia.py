@@ -15,8 +15,11 @@ import logging
 import threading
 import time
 
-import pythoncom
-import uiautomation as auto
+from tether.platform.capabilities import CAPABILITIES, UnsupportedOnThisPlatform
+
+if CAPABILITIES.accessibility:
+    import pythoncom
+    import uiautomation as auto
 
 log = logging.getLogger(__name__)
 
@@ -69,6 +72,8 @@ _DIALOG_TRIGGER_KEYWORDS = (
 
 
 def find_root_window(keyword: str):
+    if not CAPABILITIES.accessibility:
+        raise UnsupportedOnThisPlatform("Reading the accessibility tree")
     _ensure_com_initialized()
     for w in auto.GetRootControl().GetChildren():
         if keyword.lower() in (w.Name or "").lower():
