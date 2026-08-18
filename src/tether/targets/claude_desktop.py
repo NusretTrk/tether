@@ -38,7 +38,9 @@ else:
 if CAPABILITIES.window_control:
     import win32gui
 from tether.platform.ocr import find_input_box_anchor, ocr_find_word, ocr_text
-from tether.platform.window import capture_window, find_window_by_keyword, focus_window
+from tether.platform.window import (
+    capture_window, find_window_by_keyword, focus_window, set_clipboard_image,
+)
 from tether.targets.base import Dialog, PasteResult, Session, TargetStatus
 
 log = logging.getLogger(__name__)
@@ -123,6 +125,54 @@ class ClaudeDesktopTarget:
         after_text = ocr_text(_crop_input(capture_window(hwnd))).strip()
 
         if not after_text or after_text == before_text:
+            return PasteResult(False, "paste_not_detected")
+        return PasteResult(True)
+
+    def stage_photo(self, image_bytes: bytes) -> PasteResult:
+        """Same click-and-paste mechanism as stage_text, but puts an image
+        on the clipboard instead of text — this is how Claude Desktop
+        receives a pasted screenshot normally, so a photo forwarded from
+        Telegram lands the same way. Verified by comparing pixel content of
+        the input area before/after (OCR doesn't apply to an image), rather
+        than the before/after text compare stage_text uses."""
+        hwnd = self._hwnd()
+        if not hwnd:
+            return PasteResult(False, "window_not_found")
+        if not set_clipboard_image(image_bytes):
+            return PasteResult(False, "clipboard_failed")
+        if not focus_window(hwnd):
+            return PasteResult(False, "focus_failed")
+        time.sleep(0.2)
+
+        win_left, win_top, win_right, win_bottom = win32gui.GetWindowRect(hwnd)
+        win_width = win_right - win_left
+        anchor = find_input_box_anchor(capture_window(hwnd))
+        if anchor:
+            a_left, a_top, a_right, a_bottom = anchor
+            click_x = win_left + a_left + 100
+            click_y = win_top + (a_top + a_bottom) // 2
+            crop_left = max(0, a_left - 20)
+            crop_right = min(win_width, a_right + INPUT_RIGHT_MARGIN_PX)
+        else:
+            click_x = win_left + win_width // 2
+            click_y = win_bottom - INPUT_AREA_HEIGHT_PX // 2
+            crop_left = int(win_width * 0.35)
+            crop_right = int(win_width * 0.8)
+
+        pyautogui.click(click_x, click_y)
+        time.sleep(0.2)
+
+        def _crop_input(img: Image.Image) -> Image.Image:
+            h = img.height
+            top = max(0, h - INPUT_AREA_HEIGHT_PX)
+            return img.crop((crop_left, top, crop_right, h))
+
+        before = _crop_input(capture_window(hwnd)).tobytes()
+        pyautogui.hotkey("ctrl", "v")
+        time.sleep(0.6)  # image paste renders a thumbnail — give it longer than text
+        after = _crop_input(capture_window(hwnd)).tobytes()
+
+        if after == before:
             return PasteResult(False, "paste_not_detected")
         return PasteResult(True)
 

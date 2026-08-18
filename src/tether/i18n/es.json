@@ -90,12 +90,15 @@
   "key_escape": "Esc",
   "key_tab": "Tab",
   "key_mode": "Modo (Shift+Tab)",
-  "key_sent": "Enviado: {key}",
+  "key_sent": "Enviado: {key_name}",
   "key_failed": "No se pudo enviar la tecla - ventana sin foco.",
   "prompt_detected": "La app espera una respuesta:\n\n{text}",
   "key_all": "a",
   "key_space": "Espacio",
   "key_backspace": "←Bksp",
   "window_usage": "Uso: /window <claude|avd> <título de ventana>",
-  "window_set": "Ventana {which} establecida en: {keyword}"
+  "window_set": "Ventana {which} establecida en: {keyword}",
+  "photo_clipboard_failed": "No se pudo copiar la imagen al portapapeles.",
+  "photo_paste_failed": "No se pudo pegar la foto — inténtalo de nuevo.",
+  "staged_photo_prompt": "A punto de enviar esta foto — ¿confirmas?"
 }

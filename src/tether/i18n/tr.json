@@ -90,12 +90,15 @@
   "key_escape": "Esc",
   "key_tab": "Tab",
   "key_mode": "Mod (Shift+Tab)",
-  "key_sent": "Gönderildi: {key}",
+  "key_sent": "Gönderildi: {key_name}",
   "key_failed": "Tuş gönderilemedi - pencere odakta değil.",
   "prompt_detected": "Uygulama yanıt bekliyor:\n\n{text}",
   "key_all": "a",
   "key_space": "Boşluk",
   "key_backspace": "←Sil",
   "window_usage": "Kullanım: /window <claude|avd> <pencere başlığı>",
-  "window_set": "{which} penceresi şuna ayarlandı: {keyword}"
+  "window_set": "{which} penceresi şuna ayarlandı: {keyword}",
+  "photo_clipboard_failed": "Görsel panoya kopyalanamadı.",
+  "photo_paste_failed": "Fotoğraf yapıştırılamadı — tekrar dene.",
+  "staged_photo_prompt": "Bu fotoğraf gönderilecek — onaylıyor musun?"
 }

@@ -18,7 +18,7 @@ def main_reply_keyboard(_t) -> ReplyKeyboardMarkup:
         [
             [_t("btn_status"), _t("btn_screen")],
             [_t("btn_stop"), _t("btn_sessions")],
-            [_t("btn_menu")],
+            [_t("btn_keypad"), _t("btn_menu")],
         ],
         resize_keyboard=True,
         is_persistent=True,

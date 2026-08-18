@@ -90,12 +90,15 @@
   "key_escape": "Esc",
   "key_tab": "Tab",
   "key_mode": "Mode (Shift+Tab)",
-  "key_sent": "Sent: {key}",
+  "key_sent": "Sent: {key_name}",
   "key_failed": "Couldn't send that key - window not focused.",
   "prompt_detected": "The app is waiting for an answer:\n\n{text}",
   "key_all": "a",
   "key_space": "Space",
   "key_backspace": "←Bksp",
   "window_usage": "Usage: /window <claude|avd> <window title keyword>",
-  "window_set": "{which} window set to match: {keyword}"
+  "window_set": "{which} window set to match: {keyword}",
+  "photo_clipboard_failed": "Couldn't put the image on the clipboard.",
+  "photo_paste_failed": "Photo paste didn't land — try again.",
+  "staged_photo_prompt": "About to send this photo — confirm?"
 }

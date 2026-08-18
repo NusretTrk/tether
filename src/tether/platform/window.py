@@ -22,6 +22,7 @@ if CAPABILITIES.window_control:
     from ctypes import windll
 
     import win32api
+    import win32clipboard
     import win32com.client
     import win32con
     import win32gui
@@ -103,6 +104,39 @@ def focus_window(hwnd, retries: int = 4) -> bool:
 
     log.error("focus_window: could not confirm foreground for hwnd=%s", hwnd)
     return False
+
+
+def set_clipboard_image(image_bytes: bytes) -> bool:
+    """Puts image bytes on the Windows clipboard as CF_DIB, the format a
+    plain Ctrl+V paste expects — this is how a screenshot copied normally
+    ends up pasteable anywhere, images sent from Telegram use the same
+    path. BMP-without-its-14-byte-file-header is a valid CF_DIB payload,
+    the standard trick for this on Windows."""
+    _require_windows("Setting clipboard image")
+    import io
+    try:
+        img = Image.open(io.BytesIO(image_bytes))
+        if img.mode != "RGB":
+            img = img.convert("RGB")
+        buf = io.BytesIO()
+        img.save(buf, "BMP")
+        dib = buf.getvalue()[14:]
+        buf.close()
+    except Exception as e:
+        log.warning("set_clipboard_image: could not decode/convert image: %s", e)
+        return False
+
+    try:
+        win32clipboard.OpenClipboard()
+        try:
+            win32clipboard.EmptyClipboard()
+            win32clipboard.SetClipboardData(win32clipboard.CF_DIB, dib)
+        finally:
+            win32clipboard.CloseClipboard()
+        return True
+    except Exception as e:
+        log.warning("set_clipboard_image: clipboard write failed: %s", e)
+        return False
 
 
 def capture_window(hwnd) -> Image.Image:

@@ -76,6 +76,7 @@ async def transcript_job(context: ContextTypes.DEFAULT_TYPE) -> None:
                 pass
         state.pending_send_text = None
         state.pending_send_message_id = None
+        state.pending_send_kind = "text"
 
     events = state.tailer.poll()
     if not events:
@@ -104,11 +105,18 @@ async def transcript_job(context: ContextTypes.DEFAULT_TYPE) -> None:
             state.pending_tool_calls.pop(event.tool_id, None)
             state.stall_notified.discard(event.tool_id)
 
-        if (
+        text_confirmed = (
             event.type == EventType.USER_TEXT
+            and state.pending_send_kind == "text"
             and state.pending_send_text is not None
             and event.text.strip() == state.pending_send_text.strip()
-        ):
+        )
+        image_confirmed = (
+            event.type == EventType.IMAGE
+            and state.pending_send_kind == "image"
+            and state.pending_send_message_id is not None
+        )
+        if text_confirmed or image_confirmed:
             if state.pending_send_message_id:
                 try:
                     await context.bot.edit_message_text(
@@ -118,6 +126,7 @@ async def transcript_job(context: ContextTypes.DEFAULT_TYPE) -> None:
                     pass
             state.pending_send_text = None
             state.pending_send_message_id = None
+            state.pending_send_kind = "text"
 
         if mode == "quiet":
             continue

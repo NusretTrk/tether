@@ -63,7 +63,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if category == "key":
         key = ":".join(parts[1:])
         ok = await asyncio.to_thread(state.target.send_key, key)
-        await query.answer(_t("key_sent", key=key) if ok else _t("key_failed"), show_alert=not ok)
+        await query.answer(_t("key_sent", key_name=key) if ok else _t("key_failed"), show_alert=not ok)
         return
 
     # ---- sessions ----
@@ -193,26 +193,31 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if category == "staged":
         action = parts[1]
         if action == "send":
-            if state.staged_text is None:
+            if state.staged_text is None and not state.staged_photo:
                 await edit(_t("staged_cancelled"))
                 return
             pending_text = state.staged_text
+            was_photo = state.staged_photo
             ok = await asyncio.to_thread(state.target.press_enter)
             state.staged_text = None
+            state.staged_photo = False
             if not ok:
                 await edit(_t("focus_failed"))
                 return
             await edit("…")
             import time
             state.pending_send_text = pending_text
+            state.pending_send_kind = "image" if was_photo else "text"
             state.pending_send_message_id = query.message.message_id
             state.pending_send_since = time.monotonic()
         elif action == "edit":
             state.staged_text = None
+            state.staged_photo = False
             await asyncio.to_thread(state.target.clear_input)
             await edit(_t("staged_edit_prompt"))
         elif action == "cancel":
             state.staged_text = None
+            state.staged_photo = False
             await asyncio.to_thread(state.target.clear_input)
             await edit(_t("staged_cancelled"))
         return

@@ -14,7 +14,7 @@ from tether.logsetup import setup_logging
 from tether.transport import handlers
 from tether.transport.callbacks import handle_callback
 from tether.transport.state import AppState
-from tether.transport.text import handle_text
+from tether.transport.text import handle_photo, handle_text
 from tether.transport.jobs import (
     activity_job, dialog_job, stall_job, temp_monitor_job, transcript_job, usage_limit_job,
 )
@@ -73,6 +73,7 @@ def _build_app(config: Config) -> Application:
     app.add_handler(CommandHandler("settings", handlers.cmd_settings))
     app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+    app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_error_handler(handlers.error_handler)
 
     settings = config.settings

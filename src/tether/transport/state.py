@@ -46,6 +46,7 @@ class AppState:
     last_temp_alarm: float = 0.0
 
     staged_text: str | None = None
+    staged_photo: bool = False
     active_ask_id: str | None = None
 
     # Set right after pressing Enter; cleared by transcript_job once the
@@ -53,6 +54,7 @@ class AppState:
     # ground-truth confirmation that replaces the old screenshot-compare
     # heuristic. See transport/jobs.py and transport/text.py.
     pending_send_text: str | None = None
+    pending_send_kind: str = "text"  # "text" or "image" — which event type confirms delivery
     pending_send_message_id: int | None = None
     pending_send_since: float = 0.0
 

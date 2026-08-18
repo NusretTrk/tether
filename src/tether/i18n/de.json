@@ -90,12 +90,15 @@
   "key_escape": "Esc",
   "key_tab": "Tab",
   "key_mode": "Modus (Shift+Tab)",
-  "key_sent": "Gesendet: {key}",
+  "key_sent": "Gesendet: {key_name}",
   "key_failed": "Taste nicht gesendet - Fenster nicht fokussiert.",
   "prompt_detected": "Die App wartet auf eine Antwort:\n\n{text}",
   "key_all": "a",
   "key_space": "Leer",
   "key_backspace": "←Rückt.",
   "window_usage": "Verwendung: /window <claude|avd> <Fenstertitel>",
-  "window_set": "{which}-Fenster gesetzt auf: {keyword}"
+  "window_set": "{which}-Fenster gesetzt auf: {keyword}",
+  "photo_clipboard_failed": "Bild konnte nicht in die Zwischenablage kopiert werden.",
+  "photo_paste_failed": "Foto einfügen fehlgeschlagen — erneut versuchen.",
+  "staged_photo_prompt": "Dieses Foto wird gesendet — bestätigen?"
 }
