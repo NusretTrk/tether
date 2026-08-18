@@ -58,6 +58,8 @@ class FakeSettings:
     def __init__(self, language):
         self.language = language
         self.confirm_before_send = False
+        self.defer_when_user_active_sec = 0
+        self.auto_send_after_idle_sec = 0
 
 
 class FakeSecrets:

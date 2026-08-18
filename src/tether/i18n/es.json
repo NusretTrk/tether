@@ -119,5 +119,8 @@
   "app_restart_confirm_yes": "Reiniciar",
   "app_restarting": "Cerrando Claude y esperando la liberación de archivos...",
   "app_restarted": "Claude Desktop reiniciado.",
-  "app_restart_failed": "El reinicio falló en: {reason}"
+  "app_restart_failed": "El reinicio falló en: {reason}",
+  "deferred_user_active": "Estás usando el equipo ahora (última entrada hace {seconds}s), así que esto queda en espera en vez de robarte el foco. Se enviará cuando estés inactivo, o envíalo ya:",
+  "deferred_send_now": "Enviar ahora",
+  "deferred_auto_sent": "Quedaste inactivo - se envió el mensaje en espera."
 }

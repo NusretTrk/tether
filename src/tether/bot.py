@@ -16,8 +16,8 @@ from tether.transport.callbacks import handle_callback
 from tether.transport.state import AppState
 from tether.transport.text import handle_photo, handle_text
 from tether.transport.jobs import (
-    activity_job, app_health_job, dialog_job, stall_job, temp_monitor_job,
-    transcript_job, usage_limit_job,
+    activity_job, app_health_job, deferred_send_job, dialog_job, stall_job,
+    temp_monitor_job, transcript_job, usage_limit_job,
 )
 
 log = logging.getLogger(__name__)
@@ -94,6 +94,8 @@ def _build_app(config: Config) -> Application:
     else:
         log.info("accessibility features unavailable on %s - session and dialog watchers disabled", platform_name())
     app.job_queue.run_repeating(stall_job, interval=15, first=30)
+    if CAPABILITIES.window_control:
+        app.job_queue.run_repeating(deferred_send_job, interval=5, first=20)
     if CAPABILITIES.window_control:
         app.job_queue.run_repeating(
             app_health_job, interval=settings.app_health_check_interval_sec, first=25,

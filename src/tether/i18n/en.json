@@ -119,5 +119,8 @@
   "app_restart_confirm_yes": "Restart",
   "app_restarting": "Closing Claude and waiting for file handles to release...",
   "app_restarted": "Claude Desktop restarted.",
-  "app_restart_failed": "Restart failed at: {reason}"
+  "app_restart_failed": "Restart failed at: {reason}",
+  "deferred_user_active": "You're using the machine right now (last input {seconds}s ago), so this is on hold rather than stealing your focus. It'll send once you've been idle a bit, or send it now:",
+  "deferred_send_now": "Send now",
+  "deferred_auto_sent": "You went idle - sent the held message."
 }

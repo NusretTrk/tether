@@ -215,6 +215,15 @@ def restart_confirm_keyboard(_t) -> InlineKeyboardMarkup:
     ])
 
 
+def deferred_keyboard(_t) -> InlineKeyboardMarkup:
+    """Shown when a message is held back because someone is using the
+    machine. Nothing has been typed yet at this point."""
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(_t("deferred_send_now"), callback_data="defer:send"),
+         InlineKeyboardButton(_t("staged_cancel"), callback_data="defer:cancel")],
+    ])
+
+
 def staged_message_keyboard(_t) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([[
         InlineKeyboardButton(_t("staged_send"), callback_data="staged:send"),

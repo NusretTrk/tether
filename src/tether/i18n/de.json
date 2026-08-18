@@ -119,5 +119,8 @@
   "app_restart_confirm_yes": "Neu starten",
   "app_restarting": "Claude wird beendet, warte auf Freigabe der Dateihandles...",
   "app_restarted": "Claude Desktop neu gestartet.",
-  "app_restart_failed": "Neustart fehlgeschlagen bei: {reason}"
+  "app_restart_failed": "Neustart fehlgeschlagen bei: {reason}",
+  "deferred_user_active": "Du nutzt den Rechner gerade (letzte Eingabe vor {seconds}s), daher wird das zurückgehalten statt den Fokus zu stehlen. Es geht raus, sobald du kurz inaktiv bist, oder jetzt senden:",
+  "deferred_send_now": "Jetzt senden",
+  "deferred_auto_sent": "Du warst inaktiv - zurückgehaltene Nachricht gesendet."
 }

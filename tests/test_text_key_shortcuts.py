@@ -57,6 +57,10 @@ class FakeTarget:
 class FakeSettings:
     language = "en"
     confirm_before_send = False
+    # 0 disables the presence check, so these tests exercise the direct
+    # send path they are actually about rather than the deferral path.
+    defer_when_user_active_sec = 0
+    auto_send_after_idle_sec = 0
 
 
 class FakeSecrets:

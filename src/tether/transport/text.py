@@ -15,6 +15,7 @@ from telegram.ext import ContextTypes
 
 from tether.i18n import make_translator
 from tether.mcp import shared_state
+from tether.platform.presence import idle_seconds, is_user_active
 from tether.transport import menus
 from tether.transport.handlers import (
     cmd_keys, cmd_menu, cmd_screen, cmd_sessions, cmd_status, cmd_stop, restricted, _send_screenshot,
@@ -107,7 +108,23 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(_t("key_sent", key_name=text) if ok else _t("key_failed"))
         return
 
-    # 3. Message for the target app
+    # 3. Message for the target app.
+    # Presence is checked *before* staging, not after: staging focuses the
+    # window and types, so by the time it fails it has already interrupted
+    # whoever was at the keyboard.
+    threshold = state.config.settings.defer_when_user_active_sec
+    if await asyncio.to_thread(is_user_active, threshold):
+        idle = await asyncio.to_thread(idle_seconds)
+        state.deferred_text = text
+        state.deferred_photo_bytes = None
+        state.deferred_caption = ""
+        msg = await update.message.reply_text(
+            _t("deferred_user_active", seconds=int(idle or 0)),
+            reply_markup=menus.deferred_keyboard(_t),
+        )
+        state.deferred_message_id = msg.message_id
+        return
+
     result = await asyncio.to_thread(state.target.stage_text, text)
     if not result.ok:
         reason_key = {
@@ -149,6 +166,19 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     tg_file = await context.bot.get_file(photo.file_id)
     image_bytes = bytes(await tg_file.download_as_bytearray())
 
+    threshold = state.config.settings.defer_when_user_active_sec
+    if await asyncio.to_thread(is_user_active, threshold):
+        idle = await asyncio.to_thread(idle_seconds)
+        state.deferred_text = None
+        state.deferred_photo_bytes = image_bytes
+        state.deferred_caption = caption
+        msg = await update.message.reply_text(
+            _t("deferred_user_active", seconds=int(idle or 0)),
+            reply_markup=menus.deferred_keyboard(_t),
+        )
+        state.deferred_message_id = msg.message_id
+        return
+
     result = await asyncio.to_thread(state.target.stage_photo, image_bytes, caption)
     if not result.ok:
         reason_key = {
@@ -176,3 +206,37 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     state.pending_send_kind = "image"
     state.pending_send_message_id = sent_msg.message_id
     state.pending_send_since = time.monotonic()
+
+
+async def deliver_deferred(context, state, _t) -> tuple[bool, str]:
+    """Sends whatever was held back. Shared by the Send-now button and the
+    idle auto-send job so both behave identically. Returns (ok, reason)."""
+    text = state.deferred_text
+    photo = state.deferred_photo_bytes
+    caption = state.deferred_caption
+
+    if text is None and photo is None:
+        return (False, "nothing_deferred")
+
+    if photo is not None:
+        result = await asyncio.to_thread(state.target.stage_photo, photo, caption)
+    else:
+        result = await asyncio.to_thread(state.target.stage_text, text)
+
+    if not result.ok:
+        return (False, result.reason)
+
+    ok = await asyncio.to_thread(state.target.press_enter)
+    if not ok:
+        return (False, "focus_failed")
+
+    state.pending_send_text = None if photo is not None else text
+    state.pending_send_kind = "image" if photo is not None else "text"
+    state.pending_send_message_id = state.deferred_message_id
+    state.pending_send_since = time.monotonic()
+
+    state.deferred_text = None
+    state.deferred_photo_bytes = None
+    state.deferred_caption = ""
+    state.deferred_message_id = None
+    return (True, "ok")

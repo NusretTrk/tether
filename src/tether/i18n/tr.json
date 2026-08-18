@@ -119,5 +119,8 @@
   "app_restart_confirm_yes": "Yeniden başlat",
   "app_restarting": "Claude kapatılıyor, dosya kilitlerinin bırakılması bekleniyor...",
   "app_restarted": "Claude Desktop yeniden başlatıldı.",
-  "app_restart_failed": "Yeniden başlatma şurada başarısız: {reason}"
+  "app_restart_failed": "Yeniden başlatma şurada başarısız: {reason}",
+  "deferred_user_active": "Şu anda bilgisayarı kullanıyorsun (son giriş {seconds}sn önce), bu yüzden odağı çalmak yerine bekletiliyor. Biraz boşta kalınca gönderilecek, ya da şimdi gönder:",
+  "deferred_send_now": "Şimdi gönder",
+  "deferred_auto_sent": "Boşta kaldın - bekleyen mesaj gönderildi."
 }

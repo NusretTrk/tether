@@ -211,6 +211,26 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await edit(_t("confirm_set", state=_t("confirm_on" if on else "confirm_off")), menus.settings_menu(_t))
         return
 
+    # ---- deferred message (held because the user was at the keyboard) ----
+    if category == "defer":
+        action = parts[1]
+        if action == "cancel":
+            state.deferred_text = None
+            state.deferred_photo_bytes = None
+            state.deferred_caption = ""
+            state.deferred_message_id = None
+            await edit(_t("staged_cancelled"))
+            return
+        if action == "send":
+            from tether.transport.text import deliver_deferred
+            ok, reason = await deliver_deferred(context, state, _t)
+            if ok:
+                await edit(_t("staged_sent"))
+            else:
+                await edit(_t("error_generic", error=reason))
+            return
+        return
+
     # ---- app lifecycle ----
     if category == "app":
         action = parts[1]

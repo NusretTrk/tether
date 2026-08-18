@@ -101,6 +101,18 @@ class Settings:
     # live session, so it stays a deliberate action.
     app_health_watch_enabled: bool = True
     app_health_check_interval_sec: int = 60
+
+    # If the person at the machine used the keyboard or mouse within
+    # this many seconds, hold remote messages instead of stealing
+    # focus mid-keystroke. 0 disables the check.
+    defer_when_user_active_sec: int = 20
+    # Auto-send a held message once the machine has been idle this long.
+    # 0 means hold until the Send button is pressed.
+    auto_send_after_idle_sec: int = 45
+
+    # Put the user's clipboard back after pasting. Only text is
+    # restored - see platform/window.py::preserve_clipboard.
+    preserve_user_clipboard: bool = True
     # Substrings (case-insensitive) of session names to never notify
     # about finishing. Defaults to the session tether itself typically
     # runs inside of — without this, the bot notifies about its own

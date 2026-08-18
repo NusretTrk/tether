@@ -39,7 +39,8 @@ if CAPABILITIES.window_control:
     import win32gui
 from tether.platform.ocr import find_input_box_anchor, ocr_find_word, ocr_text
 from tether.platform.window import (
-    capture_window, find_window_by_keyword, focus_window, set_clipboard_image,
+    capture_window, find_window_by_keyword, focus_window, preserve_clipboard,
+    set_clipboard_image,
 )
 from tether.targets.base import Dialog, PasteResult, Session, TargetStatus
 
@@ -67,10 +68,12 @@ class ClaudeDesktopTarget:
         window_keyword: str = "Claude",
         app_path_filter: str = "",
         launch_command: str = "",
+        preserve_user_clipboard: bool = True,
     ):
         self.window_keyword = window_keyword
         self.app_path_filter = app_path_filter or self.DEFAULT_APP_PATH_FILTER
         self.launch_command = launch_command
+        self.preserve_user_clipboard = preserve_user_clipboard
 
     # ---- app lifecycle ----
 
@@ -160,6 +163,10 @@ class ClaudeDesktopTarget:
         hwnd = self._hwnd()
         if not hwnd:
             return PasteResult(False, "window_not_found")
+        with preserve_clipboard(self.preserve_user_clipboard):
+            return self._stage_text_inner(hwnd, text)
+
+    def _stage_text_inner(self, hwnd, text: str) -> PasteResult:
         pyperclip.copy(text)
         if not focus_window(hwnd):
             return PasteResult(False, "focus_failed")
@@ -214,6 +221,10 @@ class ClaudeDesktopTarget:
         hwnd = self._hwnd()
         if not hwnd:
             return PasteResult(False, "window_not_found")
+        with preserve_clipboard(self.preserve_user_clipboard):
+            return self._stage_photo_inner(hwnd, image_bytes, caption)
+
+    def _stage_photo_inner(self, hwnd, image_bytes: bytes, caption: str) -> PasteResult:
         if not set_clipboard_image(image_bytes):
             return PasteResult(False, "clipboard_failed")
         if not focus_window(hwnd):

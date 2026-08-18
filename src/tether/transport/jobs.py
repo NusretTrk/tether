@@ -318,3 +318,36 @@ async def app_health_job(context: ContextTypes.DEFAULT_TYPE) -> None:
         await context.bot.send_message(state.config.secrets.chat_id, _t("app_back_up"))
 
     state.app_was_running = running
+
+
+async def deferred_send_job(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Sends a held message once the machine has actually gone idle.
+
+    Without this, deferring would just mean "your message never arrives
+    unless you notice the button" - the point is that walking away from the
+    keyboard is enough for it to go through on its own.
+    """
+    import asyncio
+
+    from tether.platform.presence import idle_seconds
+    from tether.transport.text import deliver_deferred
+
+    state = context.bot_data["state"]
+    settings = state.config.settings
+
+    if state.deferred_text is None and state.deferred_photo_bytes is None:
+        return
+    if settings.auto_send_after_idle_sec <= 0:
+        return  # hold indefinitely; only the button sends
+
+    idle = await asyncio.to_thread(idle_seconds)
+    if idle is None or idle < settings.auto_send_after_idle_sec:
+        return
+
+    _t = make_translator(settings.language)
+    ok, reason = await deliver_deferred(context, state, _t)
+    chat_id = state.config.secrets.chat_id
+    if ok:
+        await context.bot.send_message(chat_id, _t("deferred_auto_sent"))
+    else:
+        await context.bot.send_message(chat_id, _t("error_generic", error=reason))

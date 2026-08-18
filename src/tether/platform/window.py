@@ -106,6 +106,70 @@ def focus_window(hwnd, retries: int = 4) -> bool:
     return False
 
 
+def _get_clipboard_text() -> str | None:
+    """Current clipboard text, or None if the clipboard holds something
+    else (or nothing)."""
+    try:
+        win32clipboard.OpenClipboard()
+        try:
+            if not win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_UNICODETEXT):
+                return None
+            return win32clipboard.GetClipboardData(win32clipboard.CF_UNICODETEXT)
+        finally:
+            win32clipboard.CloseClipboard()
+    except Exception:
+        return None
+
+
+def _set_clipboard_text(text: str) -> bool:
+    try:
+        win32clipboard.OpenClipboard()
+        try:
+            win32clipboard.EmptyClipboard()
+            win32clipboard.SetClipboardData(win32clipboard.CF_UNICODETEXT, text)
+            return True
+        finally:
+            win32clipboard.CloseClipboard()
+    except Exception:
+        return False
+
+
+class preserve_clipboard:
+    """Restores the user's clipboard text after a paste.
+
+    Pasting into the target app means putting our content on the clipboard,
+    which silently destroys whatever the person at the keyboard had copied.
+    They notice when their next Ctrl+V produces a message they sent from
+    their phone half an hour ago.
+
+    Only text is preserved. Restoring arbitrary clipboard formats means
+    enumerating and round-tripping every one of them, including
+    application-private formats that don't survive it - reliably worse than
+    doing nothing. Text covers the overwhelmingly common case; if the
+    clipboard held an image or a file list, it is left as our content and
+    that limitation is documented rather than half-handled.
+    """
+
+    def __init__(self, enabled: bool = True):
+        self.enabled = enabled and CAPABILITIES.window_control
+        self._saved: str | None = None
+
+    def __enter__(self):
+        if self.enabled:
+            self._saved = _get_clipboard_text()
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        if self.enabled and self._saved is not None:
+            # Best effort - a failure here must not mask an exception from
+            # the block itself.
+            try:
+                _set_clipboard_text(self._saved)
+            except Exception as e:
+                log.debug("could not restore clipboard: %s", e)
+        return False
+
+
 def set_clipboard_image(image_bytes: bytes) -> bool:
     """Puts image bytes on the Windows clipboard as CF_DIB, the format a
     plain Ctrl+V paste expects — this is how a screenshot copied normally

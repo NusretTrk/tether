@@ -50,6 +50,14 @@ class AppState:
     temp_history: list[str] = field(default_factory=list)
     last_temp_alarm: float = 0.0
 
+    # Held because the user was at the keyboard when it arrived. Nothing
+    # has touched the window yet - deferral happens before any focus
+    # steal, which is the entire point.
+    deferred_text: str | None = None
+    deferred_photo_bytes: bytes | None = None
+    deferred_caption: str = ""
+    deferred_message_id: int | None = None
+
     staged_text: str | None = None
     staged_photo: bool = False
     active_ask_id: str | None = None
@@ -69,6 +77,7 @@ class AppState:
             config.settings.claude_window_keyword,
             config.settings.claude_app_path_filter,
             config.settings.claude_launch_command,
+            config.settings.preserve_user_clipboard,
         )
         return AppState(
             config=config,
