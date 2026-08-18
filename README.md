@@ -1,12 +1,32 @@
 # tether
 
-Remote control and monitoring for Claude Desktop on Windows, from Telegram.
-Watch it work, type into it, switch sessions, get pinged when a task
-finishes or something needs your attention — all from your phone.
+**Keep hold of your coding agent when you walk away.**
 
-> Personal-use tool. It executes shell commands and controls your desktop on
-> your behalf. Only ever pair it with your own Telegram chat ID (enforced —
-> see [Security](#security)).
+Tether puts a running Claude Code session on your phone through Telegram:
+watch it work in real time, answer the prompts that would otherwise block
+it for hours, switch sessions, change model, run commands, and get told
+when something finishes or needs you.
+
+> Personal-use tool, published as-is. It runs shell commands and controls
+> your desktop on your behalf, gated only by your Telegram chat ID. Read
+> [DISCLAIMER.md](DISCLAIMER.md) before installing.
+
+## Platform support
+
+| | Watch and get notified | Control the app |
+|---|---|---|
+| **Windows** | yes | yes |
+| **macOS** | yes | not yet |
+| **Linux** | yes | not yet |
+
+Reading a session works anywhere, because it comes from a transcript file
+on disk. Driving the app needs OS-specific window and accessibility APIs,
+and only the Windows implementation is written. On macOS and Linux the bot
+runs, streams, and notifies normally; the control commands report that they
+are unavailable rather than failing obscurely.
+
+Adding macOS means the Accessibility API via pyobjc; Linux means AT-SPI.
+The `Target` interface is the seam for both.
 
 ## What it does
 
@@ -21,6 +41,10 @@ finishes or something needs your attention — all from your phone.
   you don't have to keep checking.
 - **Dialog/popup alerts** — flags things like a "sign in again" banner
   instead of silently doing nothing while you're away.
+- **Answer prompts remotely** — agent tools ask for permission with numbered
+  choices or y/n. A keypad sends those keystrokes, so a session blocked on a
+  prompt does not sit there until you get back to the desk. If a tool call
+  goes 90 seconds without a result you get told, with the keypad attached.
 - **Model & effort control** — `/model`, `/effort`, or the menu.
 - **Real command output** — `/cmd` runs PowerShell and shows you the actual
   output, not just "done."
@@ -72,6 +96,7 @@ the MCP server: [docs/SETUP.md](docs/SETUP.md).
 | `/cmd <command>` | Run a PowerShell command, see real output |
 | `/clear` | Clear the input box |
 | `/stop` | Stop the current generation |
+| `/keys` | Remote keypad - answer prompts the agent is blocked on |
 | `/kill` | Close terminal/emulator/Claude |
 | `/status` | Current model, effort, temperatures |
 | `/language` | Switch language |
@@ -114,9 +139,15 @@ Two files, two purposes:
   reaches disk, since Telegram puts the token in every outbound request URL.
 - If you ever suspect your token leaked, revoke it via `@BotFather` →
   `/revoke` and update `.env`.
-- `/cmd` runs arbitrary PowerShell with your account's privileges. That's
-  the point of a remote-control tool — just be aware of what "remote" means
-  here.
+- `/cmd` runs shell commands with your account's privileges. This is the
+  feature, not a flaw: a remote control that cannot run commands is not a
+  remote control. It is gated behind the chat ID check like everything else,
+  and that boundary is covered by tests specifically because it is the only
+  thing protecting it.
+- The keypad only sends keys from a fixed allowlist, checked before the
+  window is touched, so a message can never become arbitrary desktop input.
+- Unauthorised chats get no reply at all. Answering would confirm the bot
+  exists and let a stranger burn the account's rate limit.
 
 ## What's not built yet
 
@@ -137,9 +168,10 @@ pip install -r requirements-dev.txt
 pytest tests/ -v
 ```
 
-All 56 tests are GUI-independent — they run on any machine, no Claude
+All 68 tests are GUI-independent — they run on any machine, no Claude
 window or Windows accessibility stack required.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE). Please also read
+[DISCLAIMER.md](DISCLAIMER.md).
