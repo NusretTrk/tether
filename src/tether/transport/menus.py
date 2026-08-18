@@ -20,7 +20,7 @@ def main_reply_keyboard(_t) -> ReplyKeyboardMarkup:
     every time — those commands still work too, this is just the fast path."""
     return ReplyKeyboardMarkup(
         [
-            [_t("btn_screen_claude"), _t("btn_screen_avd")],
+            [_t("btn_screen_claude"), _t("btn_keypad")],
             ["1", "2", "3"],
             [_t("key_yes"), _t("key_no"), _t("key_enter")],
             [_t("btn_status"), _t("btn_sessions")],
@@ -151,6 +151,8 @@ def keypad_menu(_t, custom_keys: dict[str, str] | None = None) -> InlineKeyboard
          InlineKeyboardButton("→", callback_data="key:right")],
         [InlineKeyboardButton(_t("key_space"), callback_data="key:space"),
          InlineKeyboardButton(_t("key_backspace"), callback_data="key:backspace")],
+        [InlineKeyboardButton(_t("btn_screen_claude"), callback_data="screen:claude"),
+         InlineKeyboardButton(_t("btn_screen_avd"), callback_data="screen:avd")],
     ]
     for label, key in (custom_keys or {}).items():
         rows.append([InlineKeyboardButton(label, callback_data=f"key:{key}")])

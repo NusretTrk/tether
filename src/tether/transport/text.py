@@ -145,10 +145,11 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     _t = make_translator(state.config.settings.language)
 
     photo = update.message.photo[-1]  # last = highest resolution
+    caption = update.message.caption or ""
     tg_file = await context.bot.get_file(photo.file_id)
     image_bytes = bytes(await tg_file.download_as_bytearray())
 
-    result = await asyncio.to_thread(state.target.stage_photo, image_bytes)
+    result = await asyncio.to_thread(state.target.stage_photo, image_bytes, caption)
     if not result.ok:
         reason_key = {
             "window_not_found": "claude_not_found",
@@ -161,9 +162,8 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if state.config.settings.confirm_before_send:
         state.staged_text = None
         state.staged_photo = True
-        await update.message.reply_text(
-            _t("staged_photo_prompt"), reply_markup=menus.staged_message_keyboard(_t)
-        )
+        prompt = _t("staged_photo_caption_prompt", text=caption) if caption else _t("staged_photo_prompt")
+        await update.message.reply_text(prompt, reply_markup=menus.staged_message_keyboard(_t))
         return
 
     ok = await asyncio.to_thread(state.target.press_enter)

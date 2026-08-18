@@ -128,13 +128,19 @@ class ClaudeDesktopTarget:
             return PasteResult(False, "paste_not_detected")
         return PasteResult(True)
 
-    def stage_photo(self, image_bytes: bytes) -> PasteResult:
+    def stage_photo(self, image_bytes: bytes, caption: str = "") -> PasteResult:
         """Same click-and-paste mechanism as stage_text, but puts an image
         on the clipboard instead of text — this is how Claude Desktop
         receives a pasted screenshot normally, so a photo forwarded from
         Telegram lands the same way. Verified by comparing pixel content of
         the input area before/after (OCR doesn't apply to an image), rather
-        than the before/after text compare stage_text uses."""
+        than the before/after text compare stage_text uses.
+
+        If `caption` is given, it's pasted right after the image lands —
+        the image becomes an attachment chip and the cursor stays in the
+        text area, so a second paste continues typing after it rather than
+        replacing it. This is what makes "photo with a caption" arrive as
+        one message instead of needing two separate sends."""
         hwnd = self._hwnd()
         if not hwnd:
             return PasteResult(False, "window_not_found")
@@ -174,6 +180,13 @@ class ClaudeDesktopTarget:
 
         if after == before:
             return PasteResult(False, "paste_not_detected")
+
+        if caption:
+            pyperclip.copy(caption)
+            time.sleep(0.15)
+            pyautogui.hotkey("ctrl", "v")
+            time.sleep(0.2)
+
         return PasteResult(True)
 
     def press_enter(self) -> bool:

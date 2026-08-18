@@ -105,5 +105,6 @@
   "keypad_profile_unknown": "Kein Profil namens '{name}'. Konfiguriert: {options}",
   "keypad_profile_title": "{name}-Tastenfeld:",
   "btn_screen_claude": "📸 Claude",
-  "btn_screen_avd": "📱 AVD"
+  "btn_screen_avd": "📱 AVD",
+  "staged_photo_caption_prompt": "Dieses Foto wird gesendet mit:\n\n{text}"
 }

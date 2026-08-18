@@ -105,5 +105,6 @@
   "keypad_profile_unknown": "'{name}' adında profil yok. Tanımlı: {options}",
   "keypad_profile_title": "{name} tuş takımı:",
   "btn_screen_claude": "📸 Claude",
-  "btn_screen_avd": "📱 AVD"
+  "btn_screen_avd": "📱 AVD",
+  "staged_photo_caption_prompt": "Bu fotoğraf şununla gönderilecek:\n\n{text}"
 }
