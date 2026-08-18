@@ -122,5 +122,13 @@
   "app_restart_failed": "Neustart fehlgeschlagen bei: {reason}",
   "deferred_user_active": "Du nutzt den Rechner gerade (letzte Eingabe vor {seconds}s), daher wird das zurückgehalten statt den Fokus zu stehlen. Es geht raus, sobald du kurz inaktiv bist, oder jetzt senden:",
   "deferred_send_now": "Jetzt senden",
-  "deferred_auto_sent": "Du warst inaktiv - zurückgehaltene Nachricht gesendet."
+  "deferred_auto_sent": "Du warst inaktiv - zurückgehaltene Nachricht gesendet.",
+  "app_auto_recovering": "Claude ist abgestürzt, während du weg warst - Neustart (Versuch {attempt} von {limit}).",
+  "app_auto_recovered": "Claude läuft wieder.",
+  "app_auto_recover_failed": "Automatischer Neustart fehlgeschlagen bei: {reason}",
+  "recover_skip_user_active": "Kein automatischer Neustart - du hast den Rechner benutzt, sieht nach absichtlichem Schließen aus.",
+  "recover_skip_attempt_limit_reached": "Kein weiterer Neustart - die maximale Anzahl Fehlversuche ist erreicht. Da ist wirklich etwas kaputt.",
+  "recover_skip_cooling_down": "Noch kein Neustart - Wartezeit nach dem letzten Versuch läuft.",
+  "recover_skip_presence_unknown": "Kein automatischer Neustart - unklar, ob du am Rechner bist.",
+  "recover_skip_disabled": "Automatischer Neustart ist deaktiviert."
 }

@@ -102,6 +102,18 @@ class Settings:
     app_health_watch_enabled: bool = True
     app_health_check_interval_sec: int = 60
 
+    # Restart the app on its own if it disappears. Gated hard: only
+    # when the machine was idle (so a deliberate quit isn't undone),
+    # capped attempts within a window (so a startup crash can't loop),
+    # and always reported. See monitors/recovery.py for the reasoning.
+    auto_recover_enabled: bool = True
+    auto_recover_max_attempts: int = 3
+    auto_recover_attempt_window_sec: int = 1800
+    auto_recover_cooldown_sec: int = 120
+    # Must be >= app_health_check_interval_sec, otherwise a user who
+    # quit moments after their last keypress looks like a crash.
+    auto_recover_require_idle_sec: int = 90
+
     # If the person at the machine used the keyboard or mouse within
     # this many seconds, hold remote messages instead of stealing
     # focus mid-keystroke. 0 disables the check.

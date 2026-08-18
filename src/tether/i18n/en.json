@@ -122,5 +122,13 @@
   "app_restart_failed": "Restart failed at: {reason}",
   "deferred_user_active": "You're using the machine right now (last input {seconds}s ago), so this is on hold rather than stealing your focus. It'll send once you've been idle a bit, or send it now:",
   "deferred_send_now": "Send now",
-  "deferred_auto_sent": "You went idle - sent the held message."
+  "deferred_auto_sent": "You went idle - sent the held message.",
+  "app_auto_recovering": "Claude died while you were away - restarting it (attempt {attempt} of {limit}).",
+  "app_auto_recovered": "Claude is back up.",
+  "app_auto_recover_failed": "Automatic restart failed at: {reason}",
+  "recover_skip_user_active": "Not restarting it automatically - you were using the machine, so this looks like you closed it on purpose.",
+  "recover_skip_attempt_limit_reached": "Not restarting it again - it has already failed the maximum number of times in a row. Something is actually broken.",
+  "recover_skip_cooling_down": "Not restarting it yet - waiting out the cooldown after the last attempt.",
+  "recover_skip_presence_unknown": "Not restarting it automatically - couldn't tell whether you're at the machine.",
+  "recover_skip_disabled": "Automatic restart is turned off."
 }

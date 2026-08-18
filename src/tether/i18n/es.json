@@ -122,5 +122,13 @@
   "app_restart_failed": "El reinicio falló en: {reason}",
   "deferred_user_active": "Estás usando el equipo ahora (última entrada hace {seconds}s), así que esto queda en espera en vez de robarte el foco. Se enviará cuando estés inactivo, o envíalo ya:",
   "deferred_send_now": "Enviar ahora",
-  "deferred_auto_sent": "Quedaste inactivo - se envió el mensaje en espera."
+  "deferred_auto_sent": "Quedaste inactivo - se envió el mensaje en espera.",
+  "app_auto_recovering": "Claude se cerró mientras no estabas - reiniciándolo (intento {attempt} de {limit}).",
+  "app_auto_recovered": "Claude está funcionando de nuevo.",
+  "app_auto_recover_failed": "El reinicio automático falló en: {reason}",
+  "recover_skip_user_active": "No se reinicia automáticamente - estabas usando el equipo, parece que lo cerraste a propósito.",
+  "recover_skip_attempt_limit_reached": "No se reinicia otra vez - ya falló el máximo de veces seguidas. Algo está realmente roto.",
+  "recover_skip_cooling_down": "Aún no se reinicia - esperando el enfriamiento tras el último intento.",
+  "recover_skip_presence_unknown": "No se reinicia automáticamente - no se pudo saber si estás en el equipo.",
+  "recover_skip_disabled": "El reinicio automático está desactivado."
 }

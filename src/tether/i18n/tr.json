@@ -122,5 +122,13 @@
   "app_restart_failed": "Yeniden başlatma şurada başarısız: {reason}",
   "deferred_user_active": "Şu anda bilgisayarı kullanıyorsun (son giriş {seconds}sn önce), bu yüzden odağı çalmak yerine bekletiliyor. Biraz boşta kalınca gönderilecek, ya da şimdi gönder:",
   "deferred_send_now": "Şimdi gönder",
-  "deferred_auto_sent": "Boşta kaldın - bekleyen mesaj gönderildi."
+  "deferred_auto_sent": "Boşta kaldın - bekleyen mesaj gönderildi.",
+  "app_auto_recovering": "Sen yokken Claude kapandı - yeniden başlatılıyor ({attempt}/{limit}. deneme).",
+  "app_auto_recovered": "Claude yeniden çalışıyor.",
+  "app_auto_recover_failed": "Otomatik yeniden başlatma şurada başarısız: {reason}",
+  "recover_skip_user_active": "Otomatik başlatılmadı - bilgisayarı kullanıyordun, bilerek kapatmışsın gibi görünüyor.",
+  "recover_skip_attempt_limit_reached": "Tekrar başlatılmıyor - üst üste izin verilen kadar başarısız oldu. Gerçekten bir sorun var.",
+  "recover_skip_cooling_down": "Henüz başlatılmıyor - son denemeden sonraki bekleme süresi doluyor.",
+  "recover_skip_presence_unknown": "Otomatik başlatılmadı - başında olup olmadığın anlaşılamadı.",
+  "recover_skip_disabled": "Otomatik yeniden başlatma kapalı."
 }

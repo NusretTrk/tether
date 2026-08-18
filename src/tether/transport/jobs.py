@@ -284,20 +284,27 @@ async def stall_job(context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def app_health_job(context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Reports when Claude Desktop stops running, and when it comes back.
+    """Reports when Claude Desktop stops running, and optionally brings it
+    back on its own.
 
-    Deliberately does not restart anything on its own. A restart ends
-    whatever session was live, so it stays a deliberate action behind
-    /restart with a confirmation - an automatic one could kill work in
-    progress to fix a problem the user might not even have noticed.
+    Auto-recovery is deliberately narrow. It only fires when the machine
+    was idle through the whole detection window - a user who quit the app
+    themselves is sitting right there and should not have it reappear - and
+    it is capped so an app that crashes during startup cannot be restarted
+    in a loop. Every decision, including the decision not to act, is
+    reported. See monitors/recovery.py.
     """
     import asyncio
+    import time as _time
+
+    from tether.platform.presence import idle_seconds
 
     state = context.bot_data["state"]
     settings = state.config.settings
     if not settings.app_health_watch_enabled:
         return
     _t = make_translator(settings.language)
+    chat_id = state.config.secrets.chat_id
 
     running = await asyncio.to_thread(state.target.is_app_running)
 
@@ -306,16 +313,57 @@ async def app_health_job(context: ContextTypes.DEFAULT_TYPE) -> None:
         state.app_was_running = running
         return
 
-    if state.app_was_running and not running and not state.app_down_notified:
-        state.app_down_notified = True
-        await context.bot.send_message(
-            state.config.secrets.chat_id,
-            _t("app_down"),
-            reply_markup=menus.app_down_keyboard(_t),
-        )
-    elif running and not state.app_was_running:
+    if running and not state.app_was_running:
         state.app_down_notified = False
-        await context.bot.send_message(state.config.secrets.chat_id, _t("app_back_up"))
+        state.recovery.reset()  # it came back; don't hold past failures against it
+        await context.bot.send_message(chat_id, _t("app_back_up"))
+        state.app_was_running = running
+        return
+
+    if state.app_was_running and not running:
+        idle = await asyncio.to_thread(idle_seconds)
+        now = _time.monotonic()
+        recover, reason = state.recovery.should_recover(
+            app_running=running,
+            was_running=state.app_was_running,
+            idle_seconds=idle,
+            now=now,
+        )
+
+        if recover:
+            state.recovery.record_attempt(now)
+            attempt = state.recovery.attempts_in_window(now)
+            await context.bot.send_message(
+                chat_id,
+                _t("app_auto_recovering", attempt=attempt, limit=settings.auto_recover_max_attempts),
+            )
+            ok, fail_reason = await asyncio.to_thread(state.target.restart_app)
+            if ok:
+                state.app_was_running = True
+                state.app_down_notified = False
+                await context.bot.send_message(chat_id, _t("app_auto_recovered"))
+                return
+            await context.bot.send_message(
+                chat_id, _t("app_auto_recover_failed", reason=fail_reason)
+            )
+            state.app_down_notified = True
+        elif not state.app_down_notified:
+            state.app_down_notified = True
+            # Say *why* it wasn't auto-restarted, so silence is never
+            # ambiguous - "user_active" and "attempt_limit_reached" mean
+            # very different things to whoever is reading the alert.
+            note = _t(f"recover_skip_{reason}") if reason in (
+                "user_active", "attempt_limit_reached", "cooling_down",
+                "presence_unknown", "disabled",
+            ) else ""
+            message = _t("app_down")
+            if note:
+                message = message + "\n\n" + note
+            await context.bot.send_message(
+                chat_id,
+                message,
+                reply_markup=menus.app_down_keyboard(_t),
+            )
 
     state.app_was_running = running
 

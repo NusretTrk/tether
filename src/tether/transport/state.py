@@ -9,6 +9,7 @@ from tether.config import Config
 from tether.events import Event
 from tether.monitors.activity import ActivityWatcher
 from tether.monitors.dialogs import DialogWatcher
+from tether.monitors.recovery import RecoveryDecider, RecoveryPolicy
 from tether.sources.transcript import TranscriptTailer
 from tether.targets.claude_desktop import ClaudeDesktopTarget
 
@@ -19,6 +20,7 @@ class AppState:
     target: ClaudeDesktopTarget
     activity_watcher: ActivityWatcher
     dialog_watcher: DialogWatcher
+    recovery: RecoveryDecider
 
     tailer: TranscriptTailer | None = None
     tailer_path: Path | None = None
@@ -84,4 +86,11 @@ class AppState:
             target=target,
             activity_watcher=ActivityWatcher(target, config.settings.activity_ignore_substrings),
             dialog_watcher=DialogWatcher(target),
+            recovery=RecoveryDecider(RecoveryPolicy(
+                enabled=config.settings.auto_recover_enabled,
+                max_attempts=config.settings.auto_recover_max_attempts,
+                attempt_window_sec=config.settings.auto_recover_attempt_window_sec,
+                cooldown_sec=config.settings.auto_recover_cooldown_sec,
+                require_idle_sec=config.settings.auto_recover_require_idle_sec,
+            )),
         )
