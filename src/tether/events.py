@@ -1,7 +1,7 @@
 """
 Normalized event model for Claude Code transcript lines. Shapes here were
 verified against a live transcript, not guessed — see
-docs/superpowers/specs/2026-08-18-tether-remote-agent-control-design.md §2.
+docs/DESIGN.md section 2.
 """
 from __future__ import annotations
 

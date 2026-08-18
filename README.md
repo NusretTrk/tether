@@ -27,32 +27,38 @@ finishes or something needs your attention — all from your phone.
 - **CPU/GPU temperature monitoring** — periodic checks, emergency alerts.
 - **4 languages** — English, Turkish, German, Spanish. `/language` to switch.
 - **Agents can reach you** — an MCP server exposes `notify` and `ask` so any
-  agent (this one included) can message you, or ask a question and wait for
+  agent can message you, or ask a question and wait for
   your answer, without ever seeing your bot token.
 
 ## Quick start
 
-1. **Clone and install:**
-   ```bash
-   git clone <your-fork-url> tether
-   cd tether
-   pip install -r requirements.txt
-   ```
-2. **Get a bot token and chat ID** — see [docs/SETUP.md](docs/SETUP.md), takes
-   about 2 minutes.
-3. **Configure:**
-   ```bash
-   cp .env.example .env
-   # edit .env: paste your BOT_TOKEN and CHAT_ID
-   ```
-4. **Run:**
-   ```bash
-   python run.py
-   ```
-5. Message your bot `/start` on Telegram.
+```bash
+git clone <your-fork-url> tether
+cd tether
+pip install -r requirements.txt
+python setup.py
+```
 
-Optional: register the MCP server so agents can notify/ask you —
-see [docs/SETUP.md](docs/SETUP.md#mcp-registration).
+`setup.py` asks for a bot token (from Telegram's @BotFather), verifies it,
+then waits for you to message the bot and picks up your chat ID
+automatically — no hunting for IDs or editing config files.
+
+Then:
+
+```bash
+python run.py
+```
+
+Message your bot `/start` and you're going.
+
+**Start it automatically at login** (no admin rights needed):
+
+```
+install_autostart.bat
+```
+
+Full instructions, including building a standalone `.exe` and registering
+the MCP server: [docs/SETUP.md](docs/SETUP.md).
 
 ## Commands
 

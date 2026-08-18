@@ -1,126 +1,173 @@
 # Setup
 
-## 1. Create a Telegram bot and get a token
+## Quick setup (recommended)
 
-1. Open Telegram, search for **@BotFather** (official, blue checkmark).
+```bash
+pip install -r requirements.txt
+python setup.py
+```
+
+`setup.py` walks you through it: you paste a bot token, it checks the token
+is valid, then asks you to message the bot and picks up your chat ID
+automatically. No copying IDs from other bots, no editing files by hand.
+
+Then start it:
+
+```bash
+python run.py
+```
+
+Send `/start` to your bot on Telegram and you should get the menu back.
+
+---
+
+## Getting a bot token
+
+If you don't have one yet:
+
+1. Open Telegram and message **@BotFather** (official, blue checkmark).
 2. Send `/newbot`.
-3. Give it a display name (e.g. `My PC Controller`).
-4. Give it a username — must end in `bot` (e.g. `my_pc_remote_bot`).
-5. BotFather replies with an **HTTP API token**
-   (looks like `1234567890:ABCdefGHIjklmNOPQrsTUVwxyz`). Copy it — this is
-   your `BOT_TOKEN`.
+3. Give it a display name, e.g. `My PC Controller`.
+4. Give it a username ending in `bot`, e.g. `my_pc_remote_bot`.
+5. It replies with an **HTTP API token** that looks like
+   `1234567890:ABCdefGHIjklmNOPQrsTUVwxyz`. That's what `setup.py` wants.
 
-## 2. Get your chat ID
+Keep the token private. Anyone who has it controls your bot. If it leaks,
+send `/revoke` to BotFather and run `python setup.py` again with the new one.
 
-1. In Telegram, search for **@userinfobot** and start it.
-2. It replies with your account details, including `Id: 123456789`.
-3. Copy that number — this is your `CHAT_ID`.
+---
 
-## 3. Authorize the bot
+## Manual setup (if you'd rather not use setup.py)
 
-Bots can't message you first — you have to start the conversation:
-
-1. Open your bot's chat (the `t.me/your_bot_username` link BotFather gave you).
-2. Tap **Start** (or send `/start`).
-
-## 4. Configure tether
+Copy the example file and fill it in yourself:
 
 ```bash
 cp .env.example .env
 ```
-
-Edit `.env`:
 
 ```
 BOT_TOKEN=1234567890:ABCdefGHIjklmNOPQrsTUVwxyz
 CHAT_ID=123456789
 ```
 
-Never share this file or commit it — it's already in `.gitignore`.
+To find your chat ID manually, message **@userinfobot** on Telegram — it
+replies with `Id: 123456789`.
 
-## 5. Install and run
+`.env` is gitignored and must never be committed.
+
+Behaviour settings (language, intervals, temperature thresholds) live in
+`config.yaml`. Copy `config.example.yaml` if you want to change defaults
+before first run; otherwise defaults apply and the file gets written when
+you change something via `/settings`.
+
+---
+
+## Start automatically at login
+
+```
+install_autostart.bat
+```
+
+Double-click it, or run:
 
 ```bash
-pip install -r requirements.txt
-python run.py
+powershell -ExecutionPolicy Bypass -File install_autostart.ps1
 ```
 
-Message your bot `/start` on Telegram. You should get a reply with the main
-keyboard.
+This drops a shortcut in your personal Startup folder pointing at
+`pythonw.exe` (the windowless Python), so tether starts silently at login
+with no console window.
 
-Behavior settings (language, intervals, thresholds) live in `config.yaml` —
-copy from `config.example.yaml` if you want to customize before first run;
-otherwise defaults are used and the file is created on first save via
-`/settings`.
+**No administrator rights required.** This is deliberate — the obvious
+alternative, a Task Scheduler entry, needs elevation on most machines and
+also refuses to start on battery power by default, which is exactly when a
+laptop user wants it running.
 
-## 6. Auto-start on login (optional)
+To undo:
 
-Register a scheduled task that launches tether silently at every Windows
-login, in an **elevated** PowerShell:
-
-```powershell
-$action = New-ScheduledTaskAction -Execute "pythonw.exe" -Argument '"C:\path\to\tether\run.py"'
-$trigger = New-ScheduledTaskTrigger -AtLogOn
-$trigger.Delay = "PT45S"   # give Wi-Fi/DNS time to come up before first launch
-$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
-Register-ScheduledTask -TaskName "Tether" -Action $action -Trigger $trigger -Settings $settings -RunLevel Limited
+```bash
+powershell -ExecutionPolicy Bypass -File install_autostart.ps1 -Remove
 ```
 
-Notes on the flags — both matter, learned the hard way on the previous
-version of this bot:
+---
 
-- **`AllowStartIfOnBatteries` / `DontStopIfGoingOnBatteries`** — Windows'
-  default task settings silently refuse to start (or kill mid-run) a task
-  when not plugged in. On a laptop that's most of the time you'd want it.
-- **45s delay** — a login-triggered task can fire before networking is
-  actually up, which crashes tether's first connection attempt. tether
-  itself also retries indefinitely on startup failure (every 30s) as a
-  second line of defense, but the delay avoids the failed attempts entirely.
+## Building a standalone .exe (optional)
 
-To remove: `Unregister-ScheduledTask -TaskName "Tether" -Confirm:$false`
+You don't need this — `pythonw.exe` already runs tether in the background
+with no console, and the autostart script above uses it. Build an exe only
+if you want to run tether on a machine without Python installed.
+
+```bash
+pip install pyinstaller
+build_exe.bat
+```
+
+That produces `dist/tether.exe`. Run it directly, or point the autostart
+shortcut at it instead.
+
+Two things to know:
+
+- `.env` and `config.yaml` are **not** bundled into the exe. Keep them in
+  the same folder as `tether.exe`.
+- Antivirus software frequently flags PyInstaller output. This is a known
+  false positive affecting all PyInstaller binaries, not something specific
+  to this project — but it's a reason to prefer the plain Python route
+  unless you actually need the exe.
+
+---
 
 ## MCP registration
 
-This lets any agent — Claude Code included — notify you or ask you a
-question over Telegram, without ever seeing your bot token.
+This lets any agent — Claude Code included — message you or ask you a
+question over Telegram, without ever having your bot token pasted into it.
+
+From the `tether/` directory:
 
 ```bash
 claude mcp add tether -- python -m tether.mcp.server
 ```
 
-(Run from the `tether/` directory, or use an absolute path to `run.py`'s
-sibling `src/` — the module needs `src` on `PYTHONPATH`, which `run.py`
-sets up automatically; for the MCP entry point specifically, register it
-with the full path if you're not launching from inside `tether/`:)
+If you're registering from elsewhere, give it the full path so `src` lands
+on the import path:
 
 ```bash
 claude mcp add tether -- python -c "import sys; sys.path.insert(0, r'C:\path\to\tether\src'); from tether.mcp.server import main; main()"
 ```
 
-Once registered, any agent can call:
+Once registered, agents can call:
 
 - `notify(message)` — send you a message, don't wait for a reply.
 - `ask(question, timeout_seconds=300)` — send a question and **block until
-  you reply** on Telegram, then return your answer to the agent.
+  you reply** on Telegram, then hand your answer back to the agent.
 
-For non-MCP tools (plain scripts, opencode, cron), use the CLI fallback
-instead — same `.env`, no token on the command line:
+For anything that doesn't speak MCP (plain scripts, cron jobs), use the CLI
+fallback instead — same `.env`, no token on the command line:
 
 ```bash
 python tools/notify.py "message text"
 ```
 
+---
+
 ## Troubleshooting
 
-- **Bot doesn't respond at all** — check `tether.log` for the actual error.
-  Common cause: `.env` missing or malformed (see the startup error message,
-  it names exactly what's missing).
-- **"Unauthorized" from Telegram** — token is wrong or was revoked. Get a
-  fresh one from BotFather.
-- **Bot responds to `/start` but ignores everything else** — check your
-  `CHAT_ID` matches the account you're messaging from; the bot silently
-  ignores any chat that isn't the configured one, by design.
-- **CPU temperature always shows unavailable** — the direct ATKACPI driver
-  read only works on ASUS boards with that driver present; this is expected
-  on other hardware. GPU temperature (nvidia-smi) is independent and should
-  still work if you have an Nvidia GPU.
+**Bot doesn't respond at all.** Check `tether.log`. The most common cause is
+a missing or malformed `.env`, and the startup error names exactly what's
+wrong.
+
+**"Unauthorized" from Telegram.** The token is wrong or was revoked. Get a
+fresh one from BotFather and re-run `python setup.py`.
+
+**Bot answers `/start` but ignores everything else.** Your `CHAT_ID` doesn't
+match the account you're messaging from. The bot ignores every chat except
+the configured one, by design — that's the only thing stopping strangers
+from running shell commands on your PC.
+
+**CPU temperature always shows unavailable.** The direct ATKACPI read only
+works on ASUS boards with that driver. Expected on other hardware. GPU
+temperature comes from `nvidia-smi` and is independent.
+
+**Sessions list is empty.** Claude Desktop has to be running. The list comes
+from Windows accessibility data, which Chromium builds lazily — tether
+retries automatically, but the very first call after launching Claude can
+come back empty.

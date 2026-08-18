@@ -1,13 +1,7 @@
-# Tether — Remote Agent Control: Design Spec
+# Design notes
 
-**Date:** 2026-08-18
-**Status:** Approved for implementation (Phases 1–3)
-**Supersedes:** ad-hoc `bot.py` / `claude_kontrol.py`
-
-> **Name:** working title `tether` (a tether to your PC). Rename freely before publishing —
-> it appears only in the folder name, package name, and README.
-
----
+Why this is built the way it is. Written before the rewrite, kept because
+the reasoning still explains most of the odd-looking decisions in the code.
 
 ## 1. Problem
 

@@ -1,7 +1,7 @@
 # Architecture
 
 Full design rationale, discovery notes, and decision log:
-[docs/superpowers/specs/2026-08-18-tether-remote-agent-control-design.md](superpowers/specs/2026-08-18-tether-remote-agent-control-design.md).
+[docs/DESIGN.md](DESIGN.md).
 This file is a short map of the code; read the spec for *why*.
 
 ## The split: reading vs. writing
