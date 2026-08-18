@@ -204,27 +204,65 @@ class ClaudeDesktopTarget:
         "up", "down", "left", "right",
     }
 
-    def send_key(self, key: str) -> bool:
-        """Sends a single keystroke to the focused target window.
-        `key` may also be 'shift+tab' for mode cycling."""
+    # Chords (modifier+base) beyond the single keys above — needed for
+    # per-app keypad profiles (Cursor's accept/reject, terminal Ctrl+C,
+    # save-as-Ctrl+S) without opening this up to anything typeable.
+    # "alt" is deliberately not a safe modifier at all, not even paired
+    # with an allowlisted base key — alt+f4 closes the window, alt+tab
+    # switches focus away from the target, alt+space opens the window
+    # menu, alt+enter toggles fullscreen in many apps. A per-key blocklist
+    # for "alt" would be a losing game; excluding the modifier is the
+    # actual fix (caught by test_dangerous_combinations_rejected, which
+    # found alt+f4 slipping through the first version of this).
+    SAFE_CHORD_MODIFIERS = {"ctrl", "shift"}
+    SAFE_CHORD_BASE_KEYS = ALLOWED_KEYS | {
+        "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12",
+        "delete", "home", "end", "pageup", "pagedown", "insert",
+        "c", "v", "x", "z", "s", "d", "w", "p", "f", "r", "o", "n", "k", "l", "b", "i", "u",
+    }
+
+    @classmethod
+    def is_valid_key_spec(cls, spec: str) -> bool:
+        """A single key from ALLOWED_KEYS, or a '+'-joined chord of one or
+        more SAFE_CHORD_MODIFIERS followed by one SAFE_CHORD_BASE_KEYS."""
+        spec = spec.lower().strip()
+        if not spec:
+            return False
+        parts = spec.split("+")
+        if len(parts) == 1:
+            return parts[0] in cls.ALLOWED_KEYS
+        *mods, base = parts
+        if not mods or not base:
+            return False
+        return all(m in cls.SAFE_CHORD_MODIFIERS for m in mods) and base in cls.SAFE_CHORD_BASE_KEYS
+
+    def send_key(self, key: str, window_keyword: str | None = None) -> bool:
+        """Sends a keystroke or chord to the focused target window.
+        `window_keyword` lets a keypad profile target a different app
+        (Cursor, a terminal) than whatever this instance's own
+        window_keyword is bound to — the mechanism here is generic window
+        focus + keystroke, nothing Claude-specific about it."""
         key = key.lower().strip()
 
         # Validate before touching the window. Focusing first would let a
         # rejected key still yank focus away from whatever the user is doing.
-        is_chord = key == "shift+tab"
-        if not is_chord and key not in self.ALLOWED_KEYS:
-            log.warning("refusing to send unrecognised key %r", key)
+        if not self.is_valid_key_spec(key):
+            log.warning("refusing to send unrecognised/unsafe key %r", key)
             return False
 
-        hwnd = self._hwnd()
+        if window_keyword:
+            hwnd = find_window_by_keyword(window_keyword) if CAPABILITIES.window_control else None
+        else:
+            hwnd = self._hwnd()
         if not hwnd or not focus_window(hwnd):
             return False
         time.sleep(0.15)
 
-        if is_chord:
-            pyautogui.hotkey("shift", "tab")
+        parts = key.split("+")
+        if len(parts) == 1:
+            pyautogui.press(parts[0])
         else:
-            pyautogui.press(key)
+            pyautogui.hotkey(*parts)
         return True
 
     def press_escape(self) -> bool:

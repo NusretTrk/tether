@@ -100,6 +100,15 @@ class Settings:
     # still pass ClaudeDesktopTarget.ALLOWED_KEYS - this only controls
     # what's offered as a shortcut, not what's permitted to be sent.
     custom_keys: dict[str, str] = field(default_factory=dict)
+
+    # Named keypad profiles for controlling other apps (Cursor, a
+    # terminal, Antigravity) — each is {"window_keyword": <title
+    # substring to focus>, "keys": {label: key}}. /keys <name> shows one.
+    # Every key still passes through
+    # ClaudeDesktopTarget.is_valid_key_spec regardless of what's defined
+    # here — this only controls what's offered as a shortcut, not what's
+    # permitted to be sent. See config.example.yaml for worked examples.
+    keypad_profiles: dict[str, dict] = field(default_factory=dict)
     activity_watch_enabled: bool = True
 
     def validate(self) -> list[str]:

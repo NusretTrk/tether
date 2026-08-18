@@ -22,3 +22,35 @@ uia_poll_interval_sec: 3.0
 
 dialog_watch_enabled: true      # alert on popups/dialogs (e.g. "sign in again")
 activity_watch_enabled: true    # notify when a Running session goes Idle
+
+# Named keypad profiles for controlling other apps — /keys <name> shows
+# one, targeting whatever window title contains window_keyword. Every key
+# is still checked against ClaudeDesktopTarget.is_valid_key_spec no matter
+# what's listed here (single keys, or safe modifier+key chords like
+# ctrl+s) — this only controls what's offered as a shortcut.
+# Uncomment and adjust to match your setup:
+#
+# keypad_profiles:
+#   cursor:
+#     window_keyword: "Cursor"
+#     keys:
+#       Accept: tab
+#       Reject: escape
+#       "1": "1"
+#       "2": "2"
+#       Undo: ctrl+z
+#       Save: ctrl+s
+#   terminal:
+#     window_keyword: "Windows Terminal"
+#     keys:
+#       "Ctrl+C": ctrl+c
+#       Enter: enter
+#       Up: up
+#       Down: down
+#   antigravity:
+#     window_keyword: "Antigravity"
+#     keys:
+#       Accept: tab
+#       Reject: escape
+#       Yes: "y"
+#       No: "n"

@@ -100,5 +100,8 @@
   "window_set": "{which} window set to match: {keyword}",
   "photo_clipboard_failed": "Couldn't put the image on the clipboard.",
   "photo_paste_failed": "Photo paste didn't land — try again.",
-  "staged_photo_prompt": "About to send this photo — confirm?"
+  "staged_photo_prompt": "About to send this photo — confirm?",
+  "keypad_profile_pick": "Choose a keypad:",
+  "keypad_profile_unknown": "No profile named '{name}'. Configured: {options}",
+  "keypad_profile_title": "{name} keypad:"
 }

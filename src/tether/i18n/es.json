@@ -100,5 +100,8 @@
   "window_set": "Ventana {which} establecida en: {keyword}",
   "photo_clipboard_failed": "No se pudo copiar la imagen al portapapeles.",
   "photo_paste_failed": "No se pudo pegar la foto — inténtalo de nuevo.",
-  "staged_photo_prompt": "A punto de enviar esta foto — ¿confirmas?"
+  "staged_photo_prompt": "A punto de enviar esta foto — ¿confirmas?",
+  "keypad_profile_pick": "Elige un teclado:",
+  "keypad_profile_unknown": "No hay perfil llamado '{name}'. Configurados: {options}",
+  "keypad_profile_title": "Teclado {name}:"
 }

@@ -100,5 +100,8 @@
   "window_set": "{which} penceresi şuna ayarlandı: {keyword}",
   "photo_clipboard_failed": "Görsel panoya kopyalanamadı.",
   "photo_paste_failed": "Fotoğraf yapıştırılamadı — tekrar dene.",
-  "staged_photo_prompt": "Bu fotoğraf gönderilecek — onaylıyor musun?"
+  "staged_photo_prompt": "Bu fotoğraf gönderilecek — onaylıyor musun?",
+  "keypad_profile_pick": "Bir tuş takımı seç:",
+  "keypad_profile_unknown": "'{name}' adında profil yok. Tanımlı: {options}",
+  "keypad_profile_title": "{name} tuş takımı:"
 }

@@ -181,8 +181,26 @@ async def cmd_kill(update: Update, context: ContextTypes.DEFAULT_TYPE):
 @restricted
 async def cmd_keys(update: Update, context: ContextTypes.DEFAULT_TYPE):
     state, _t = _ctx(context)
+    profiles = state.config.settings.keypad_profiles
+    arg = context.args[0] if context.args else None
+
+    if arg is None:
+        if profiles:
+            await update.message.reply_text(
+                _t("keypad_profile_pick"), reply_markup=menus.profile_list_menu(_t, list(profiles.keys()))
+            )
+        else:
+            await update.message.reply_text(
+                _t("keypad_title"), reply_markup=menus.keypad_menu(_t, state.config.settings.custom_keys)
+            )
+        return
+
+    profile = profiles.get(arg)
+    if not profile:
+        await update.message.reply_text(_t("keypad_profile_unknown", name=arg, options=", ".join(profiles) or "-"))
+        return
     await update.message.reply_text(
-        _t("keypad_title"), reply_markup=menus.keypad_menu(_t, state.config.settings.custom_keys)
+        _t("keypad_profile_title", name=arg), reply_markup=menus.profile_keypad_menu(_t, arg, profile.get("keys", {}))
     )
 
 

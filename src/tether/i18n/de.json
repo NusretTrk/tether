@@ -100,5 +100,8 @@
   "window_set": "{which}-Fenster gesetzt auf: {keyword}",
   "photo_clipboard_failed": "Bild konnte nicht in die Zwischenablage kopiert werden.",
   "photo_paste_failed": "Foto einfügen fehlgeschlagen — erneut versuchen.",
-  "staged_photo_prompt": "Dieses Foto wird gesendet — bestätigen?"
+  "staged_photo_prompt": "Dieses Foto wird gesendet — bestätigen?",
+  "keypad_profile_pick": "Tastenfeld wählen:",
+  "keypad_profile_unknown": "Kein Profil namens '{name}'. Konfiguriert: {options}",
+  "keypad_profile_title": "{name}-Tastenfeld:"
 }

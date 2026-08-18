@@ -166,6 +166,29 @@ def prompt_reply_keyboard(_t) -> InlineKeyboardMarkup:
     ])
 
 
+def profile_keypad_menu(_t, profile_name: str, keys: dict[str, str]) -> InlineKeyboardMarkup:
+    """A user-defined keypad for a non-default target (Cursor, a terminal,
+    Antigravity) — labels and keys come straight from config.yaml, two
+    buttons per row. Every key is still re-validated against
+    ClaudeDesktopTarget.is_valid_key_spec when pressed; this only decides
+    what gets offered as a shortcut."""
+    rows = []
+    items = list(keys.items())
+    for i in range(0, len(items), 2):
+        row = [InlineKeyboardButton(label, callback_data=f"pkey:{profile_name}:{key}")
+               for label, key in items[i:i + 2]]
+        rows.append(row)
+    rows.append([back_button(_t)])
+    return InlineKeyboardMarkup(rows)
+
+
+def profile_list_menu(_t, profile_names: list[str]) -> InlineKeyboardMarkup:
+    rows = [[InlineKeyboardButton("Claude (default)", callback_data="menu:keypad")]]
+    rows += [[InlineKeyboardButton(name, callback_data=f"pkeymenu:{name}")] for name in profile_names]
+    rows.append([back_button(_t)])
+    return InlineKeyboardMarkup(rows)
+
+
 def staged_message_keyboard(_t) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([[
         InlineKeyboardButton(_t("staged_send"), callback_data="staged:send"),

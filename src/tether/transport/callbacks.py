@@ -66,6 +66,24 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.answer(_t("key_sent", key_name=key) if ok else _t("key_failed"), show_alert=not ok)
         return
 
+    # ---- profile keypad: same mechanism, targets a different window ----
+    if category == "pkeymenu":
+        name = ":".join(parts[1:])
+        profile = state.config.settings.keypad_profiles.get(name)
+        if not profile:
+            await edit(_t("keypad_profile_unknown", name=name, options=", ".join(state.config.settings.keypad_profiles) or "-"))
+            return
+        await edit(_t("keypad_profile_title", name=name), menus.profile_keypad_menu(_t, name, profile.get("keys", {})))
+        return
+
+    if category == "pkey":
+        profile_name, key = parts[1], ":".join(parts[2:])
+        profile = state.config.settings.keypad_profiles.get(profile_name)
+        window_keyword = profile.get("window_keyword") if profile else None
+        ok = await asyncio.to_thread(state.target.send_key, key, window_keyword)
+        await query.answer(_t("key_sent", key_name=key) if ok else _t("key_failed"), show_alert=not ok)
+        return
+
     # ---- sessions ----
     if category == "session" and parts[1] == "switch":
         name = ":".join(parts[2:])
