@@ -1,75 +1,60 @@
 {
   "start_welcome": "Tether ist verbunden. Nutze die Buttons unten oder /menu für alles.",
   "help_text": "/menu - vollständiges Befehlsmenü\n/sessions - Sitzungen auflisten und wechseln\n/screen <Fenster> - Fenster als Screenshot\n/model <Name> - Modell wechseln\n/effort <Stufe> - Effort wechseln\n/cmd <Befehl> - PowerShell-Befehl ausführen\n/clear - Eingabefeld leeren\n/stop - aktuelle Generierung stoppen\n/kill - Terminal/Emulator/Claude schließen\n/status - aktuelles Modell, Effort, Temperaturen\n/language - Sprache ändern\n/mode - Ausgabe-Ausführlichkeit ändern\n/confirm on|off - Sendebestätigung umschalten\n/settings - Einstellungen anzeigen/bearbeiten\n/help - diese Nachricht",
-
   "btn_status": "📊 Status",
   "btn_screen": "📸 Bildschirm",
   "btn_stop": "⏹ Stopp",
   "btn_sessions": "📋 Sitzungen",
   "btn_menu": "⚙️ Menü",
   "btn_back": "← Zurück",
-
   "menu_title": "Was möchtest du tun?",
   "menu_session": "💬 Sitzung",
   "menu_screen": "📸 Bildschirm",
   "menu_system": "🖥 System",
   "menu_settings": "⚙️ Einstellungen",
-
   "menu_session_title": "Sitzung",
   "menu_screen_title": "Bildschirm",
   "menu_system_title": "System",
   "menu_settings_title": "Einstellungen",
-
   "sessions_title": "Sitzungen (zum Wechseln tippen):",
   "sessions_none": "Keine Sitzungen gefunden.",
   "session_running": "🟢 Läuft",
   "session_idle": "⚪ Inaktiv",
   "session_switched": "Gewechselt zu: {name}",
   "session_switch_failed": "Wechsel zu dieser Sitzung fehlgeschlagen.",
-
   "window_not_found": "Fenster nicht gefunden: {window}",
   "screenshot_caption": "{window}",
-
   "model_usage": "Verwendung: /model <{options}>",
   "model_status": "Modell: {model}\nEffort: {effort}\n\n{usage}",
   "model_set": "Modell auf '{model}' gesetzt.",
   "model_unknown": "Unbekanntes Modell: {target}. Optionen: {options}",
   "model_dropdown_not_found": "Modell-/Effort-Steuerelemente nicht gefunden.",
   "model_option_not_found": "'{match}' wurde im Dropdown nicht gefunden.",
-
   "effort_usage": "Verwendung: /effort <{options}>",
   "effort_unknown": "Unbekannte Stufe: {target}. Optionen: {options}",
   "effort_current_unreadable": "Aktuelle Effort-Stufe konnte nicht gelesen werden.",
   "effort_set": "Effort auf '{level}' gesetzt.",
   "effort_set_failed": "Effort-Änderung fehlgeschlagen — erwartet '{expected}', gelesen '{actual}'.",
-
   "focus_failed": "Fenster konnte nicht fokussiert werden, Vorgang abgebrochen.",
-
   "cmd_usage": "Verwendung: /cmd <Befehl>",
   "cmd_output": "```\n{output}\n```",
   "cmd_no_output": "Befehl ausgeführt (keine Ausgabe).",
   "cmd_error": "Fehler:\n`{error}`",
-
   "clear_done": "Eingabefeld geleert.",
   "stop_sent": "Stopp gesendet.",
-
   "language_prompt": "Sprache wählen:",
   "language_set": "Sprache auf {language} gesetzt.",
-
   "mode_prompt": "Ausgabe-Ausführlichkeit wählen:",
   "mode_live": "🔴 Live — Gedanken + Text in Echtzeit",
   "mode_summary": "📄 Zusammenfassung — nur endgültige Antworten",
   "mode_quiet": "🔇 Ruhig — nur Warnungen und Fragen",
   "mode_verbose": "📢 Ausführlich — alles, inklusive Tool-Aufrufe",
   "mode_set": "Ausgabemodus auf {mode} gesetzt.",
-
   "confirm_prompt": "Sendebestätigung ist derzeit {state}.",
   "confirm_on": "an",
   "confirm_off": "aus",
   "confirm_set": "Sendebestätigung: {state}.",
-
   "settings_title": "Aktuelle Einstellungen:\n{settings}",
-
   "staged_message_prompt": "Wird gesendet:\n\n{text}",
   "staged_send": "✅ Senden",
   "staged_edit": "✏️ Bearbeiten",
@@ -78,19 +63,14 @@
   "staged_cancelled": "Abgebrochen.",
   "staged_edit_prompt": "Sende den neuen Text als Ersatz.",
   "staged_send_failed": "Senden konnte nicht bestätigt werden — Fenster prüfen.",
-
   "temp_report": "CPU: {cpu}\nGPU: {gpu} (Lüfter {fan})",
   "temp_unavailable": "nicht verfügbar",
   "temp_emergency": "🔥 NOTFALL: Temperatur bei/über {threshold}°C!\n{report}",
-
   "usage_limit_alert": "🚫 Claude-Nutzungslimit scheint erreicht ({minutes} Min, {streak} aufeinanderfolgende Prüfungen, keine Antwort).",
-
   "dialog_alert": "⚠️ Dialog erschienen: \"{name}\"\nSchaltflächen: {buttons}",
   "activity_done": "✅ {name} abgeschlossen.",
-
   "error_generic": "Fehler: {error}",
   "claude_not_found": "Claude-Fenster nicht gefunden.",
-
   "kill_menu_title": "Was soll geschlossen werden?",
   "kill_terminal": "Terminal",
   "kill_emulator": "Emulator",
@@ -98,10 +78,19 @@
   "kill_terminal_done": "Terminal-Position zurückgesetzt.",
   "kill_emulator_done": "Emulator geschlossen.",
   "kill_claude_done": "Claude geschlossen.",
-
   "ask_timeout": "(keine Antwort innerhalb von {timeout}s)",
   "ask_question_prefix": "❓ Agent fragt:",
-
   "not_authorized": "Nicht autorisiert.",
-  "unauthenticated_reply": "Dieser Chat ist nicht berechtigt, diesen Bot zu nutzen."
+  "unauthenticated_reply": "Dieser Chat ist nicht berechtigt, diesen Bot zu nutzen.",
+  "btn_keypad": "Tastenfeld",
+  "keypad_title": "Taste an die App senden:",
+  "key_yes": "j",
+  "key_no": "n",
+  "key_enter": "Enter",
+  "key_escape": "Esc",
+  "key_tab": "Tab",
+  "key_mode": "Modus (Shift+Tab)",
+  "key_sent": "Gesendet: {key}",
+  "key_failed": "Taste nicht gesendet - Fenster nicht fokussiert.",
+  "prompt_detected": "Die App wartet auf eine Antwort:\n\n{text}"
 }

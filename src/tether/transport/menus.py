@@ -29,6 +29,7 @@ def main_menu(_t) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton(_t("menu_session"), callback_data="menu:session")],
         [InlineKeyboardButton(_t("menu_screen"), callback_data="menu:screen")],
+        [InlineKeyboardButton(_t("btn_keypad"), callback_data="menu:keypad")],
         [InlineKeyboardButton(_t("menu_system"), callback_data="menu:system")],
         [InlineKeyboardButton(_t("menu_settings"), callback_data="menu:settings")],
     ])
@@ -111,6 +112,38 @@ def confirm_menu(_t) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(_t("confirm_on"), callback_data="confirm:set:on"),
          InlineKeyboardButton(_t("confirm_off"), callback_data="confirm:set:off")],
         [back_button(_t, "menu:settings")],
+    ])
+
+
+def keypad_menu(_t) -> InlineKeyboardMarkup:
+    """Remote keyboard for answering prompts the agent puts on screen."""
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("1", callback_data="key:1"),
+         InlineKeyboardButton("2", callback_data="key:2"),
+         InlineKeyboardButton("3", callback_data="key:3")],
+        [InlineKeyboardButton(_t("key_yes"), callback_data="key:y"),
+         InlineKeyboardButton(_t("key_no"), callback_data="key:n"),
+         InlineKeyboardButton(_t("key_enter"), callback_data="key:enter")],
+        [InlineKeyboardButton(_t("key_escape"), callback_data="key:escape"),
+         InlineKeyboardButton(_t("key_tab"), callback_data="key:tab"),
+         InlineKeyboardButton(_t("key_mode"), callback_data="key:shift+tab")],
+        [InlineKeyboardButton("↑", callback_data="key:up"),
+         InlineKeyboardButton("↓", callback_data="key:down")],
+        [back_button(_t)],
+    ])
+
+
+def prompt_reply_keyboard(_t) -> InlineKeyboardMarkup:
+    """Compact version attached to a detected prompt notification, so the
+    answer is one tap from the alert instead of navigating a menu."""
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("1", callback_data="key:1"),
+         InlineKeyboardButton("2", callback_data="key:2"),
+         InlineKeyboardButton("3", callback_data="key:3")],
+        [InlineKeyboardButton(_t("key_yes"), callback_data="key:y"),
+         InlineKeyboardButton(_t("key_no"), callback_data="key:n"),
+         InlineKeyboardButton(_t("key_escape"), callback_data="key:escape")],
+        [InlineKeyboardButton(_t("btn_keypad"), callback_data="menu:keypad")],
     ])
 
 

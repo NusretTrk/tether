@@ -27,6 +27,7 @@ class Event:
     text: str = ""
     tool_name: str | None = None
     tool_input: dict | None = None
+    tool_id: str | None = None
     is_error: bool = False
     raw: dict = field(default_factory=dict)
 
@@ -64,7 +65,8 @@ def parse_line(obj: dict) -> list[Event]:
             elif btype == "tool_use":
                 events.append(Event(
                     EventType.TOOL_CALL, uuid, timestamp,
-                    tool_name=block.get("name"), tool_input=block.get("input"), raw=block,
+                    tool_name=block.get("name"), tool_input=block.get("input"),
+                    tool_id=block.get("id"), raw=block,
                 ))
 
     elif t == "user":
@@ -82,6 +84,7 @@ def parse_line(obj: dict) -> list[Event]:
                         EventType.TOOL_RESULT, uuid, timestamp,
                         text=_flatten_text(block.get("content")),
                         is_error=bool(block.get("is_error")),
+                        tool_id=block.get("tool_use_id"),
                         raw={**block, "toolUseResult": obj.get("toolUseResult", {})},
                     ))
                 elif btype == "image":

@@ -14,7 +14,9 @@ from tether.transport import handlers
 from tether.transport.callbacks import handle_callback
 from tether.transport.state import AppState
 from tether.transport.text import handle_text
-from tether.transport.jobs import activity_job, dialog_job, temp_monitor_job, transcript_job, usage_limit_job
+from tether.transport.jobs import (
+    activity_job, dialog_job, stall_job, temp_monitor_job, transcript_job, usage_limit_job,
+)
 
 log = logging.getLogger(__name__)
 
@@ -29,6 +31,7 @@ BOT_COMMANDS = [
     BotCommand("clear", "Clear the input box"),
     BotCommand("stop", "Stop the current generation"),
     BotCommand("kill", "Close terminal/emulator/Claude"),
+    BotCommand("keys", "Send a key to the app (answer prompts)"),
     BotCommand("status", "Current model, effort, temps"),
     BotCommand("language", "Change language"),
     BotCommand("mode", "Change output verbosity"),
@@ -59,6 +62,7 @@ def _build_app(config: Config) -> Application:
     app.add_handler(CommandHandler("clear", handlers.cmd_clear))
     app.add_handler(CommandHandler("stop", handlers.cmd_stop))
     app.add_handler(CommandHandler("kill", handlers.cmd_kill))
+    app.add_handler(CommandHandler("keys", handlers.cmd_keys))
     app.add_handler(CommandHandler("status", handlers.cmd_status))
     app.add_handler(CommandHandler("language", handlers.cmd_language))
     app.add_handler(CommandHandler("mode", handlers.cmd_mode))
@@ -74,6 +78,7 @@ def _build_app(config: Config) -> Application:
     app.job_queue.run_repeating(temp_monitor_job, interval=settings.temp_check_interval_sec, first=10)
     app.job_queue.run_repeating(activity_job, interval=settings.uia_poll_interval_sec, first=15)
     app.job_queue.run_repeating(dialog_job, interval=settings.uia_poll_interval_sec, first=15)
+    app.job_queue.run_repeating(stall_job, interval=15, first=30)
 
     return app
 

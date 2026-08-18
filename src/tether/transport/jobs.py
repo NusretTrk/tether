@@ -13,6 +13,7 @@ from telegram.ext import ContextTypes
 from tether.events import EventType
 from tether.i18n import make_translator
 from tether.sources.discovery import find_active_transcript
+from tether.transport import menus
 from tether.transport.formatting import truncate_with_notice
 from tether.transport.streaming import make_streamer
 
@@ -94,6 +95,14 @@ async def transcript_job(context: ContextTypes.DEFAULT_TYPE) -> None:
         # must only ever be called from this one job, never from two places.
         if event.type in (EventType.ASSISTANT_TEXT, EventType.SYSTEM):
             state.usage_limit_buffer.append(event)
+
+        # Match tool calls to their results so a call that never comes back
+        # can be spotted (agent blocked on a prompt, or a long-running job).
+        if event.type == EventType.TOOL_CALL and event.tool_id:
+            state.pending_tool_calls[event.tool_id] = (time.monotonic(), event.tool_name or "tool")
+        elif event.type == EventType.TOOL_RESULT and event.tool_id:
+            state.pending_tool_calls.pop(event.tool_id, None)
+            state.stall_notified.discard(event.tool_id)
 
         if (
             event.type == EventType.USER_TEXT
@@ -230,3 +239,36 @@ async def dialog_job(context: ContextTypes.DEFAULT_TYPE) -> None:
     for d in dialogs:
         buttons = ", ".join(d.buttons) if d.buttons else "-"
         await context.bot.send_message(state.config.secrets.chat_id, _t("dialog_alert", name=d.name, buttons=buttons))
+
+
+STALL_NOTIFY_AFTER_SEC = 90
+
+
+async def stall_job(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Notifies when a tool call has been outstanding for a while.
+
+    Agent tools that need permission block on an on-screen prompt, and
+    nothing further is written to the transcript until it is answered. From
+    the outside that is indistinguishable from a slow command, so this
+    reports either case and attaches a keypad - the point is that you can
+    actually respond instead of finding out hours later that it stalled.
+    """
+    state = context.bot_data["state"]
+    settings = state.config.settings
+    if not settings.stall_watch_enabled:
+        return
+    _t = make_translator(settings.language)
+    now = time.monotonic()
+
+    for tool_id, (seen_at, tool_name) in list(state.pending_tool_calls.items()):
+        if tool_id in state.stall_notified:
+            continue
+        waited = now - seen_at
+        if waited < STALL_NOTIFY_AFTER_SEC:
+            continue
+        state.stall_notified.add(tool_id)
+        await context.bot.send_message(
+            state.config.secrets.chat_id,
+            _t("prompt_detected", text=f"{tool_name} - no result after {int(waited)}s"),
+            reply_markup=menus.prompt_reply_keyboard(_t),
+        )

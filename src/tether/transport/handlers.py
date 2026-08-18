@@ -178,6 +178,12 @@ async def cmd_kill(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 @restricted
+async def cmd_keys(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    _, _t = _ctx(context)
+    await update.message.reply_text(_t("keypad_title"), reply_markup=menus.keypad_menu(_t))
+
+
+@restricted
 async def cmd_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
     _, _t = _ctx(context)
     await update.message.reply_text(_t("language_prompt"), reply_markup=menus.language_menu(_t))

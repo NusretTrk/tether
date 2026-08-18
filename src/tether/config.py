@@ -87,6 +87,7 @@ class Settings:
     uia_poll_interval_sec: float = 3.0
 
     dialog_watch_enabled: bool = True
+    stall_watch_enabled: bool = True
     activity_watch_enabled: bool = True
 
     def validate(self) -> list[str]:

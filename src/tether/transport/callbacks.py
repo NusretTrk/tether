@@ -18,12 +18,17 @@ log = logging.getLogger(__name__)
 @restricted
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
     state = context.bot_data["state"]
     _t = make_translator(state.config.settings.language)
     data = query.data or ""
     parts = data.split(":")
     category = parts[0]
+
+    # A callback query can only be answered once. Keypad presses answer with
+    # their own toast further down, so only acknowledge here for everything
+    # else - answering twice raises.
+    if category != "key":
+        await query.answer()
 
     async def edit(text: str, markup=None):
         await query.edit_message_text(text, reply_markup=markup)
@@ -45,6 +50,18 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await edit(_t("menu_system_title"), menus.system_menu(_t))
         elif target == "settings":
             await edit(_t("menu_settings_title"), menus.settings_menu(_t))
+        elif target == "keypad":
+            await edit(_t("keypad_title"), menus.keypad_menu(_t))
+        return
+
+    # ---- remote keypad ----
+    # Answers whatever prompt the agent has put on screen (numbered choices,
+    # y/n confirmations, permission dialogs). Without this a blocked session
+    # cannot be unblocked remotely.
+    if category == "key":
+        key = ":".join(parts[1:])
+        ok = await asyncio.to_thread(state.target.send_key, key)
+        await query.answer(_t("key_sent", key=key) if ok else _t("key_failed"), show_alert=not ok)
         return
 
     # ---- sessions ----

@@ -36,6 +36,12 @@ class AppState:
     # so a repeating fault doesn't flood the chat (see error_handler).
     error_notify_times: dict[str, float] = field(default_factory=dict)
 
+    # tool_use id -> (monotonic time seen, tool name). A call still sitting
+    # here after a while means the agent is either blocked on a permission
+    # prompt or running something long; either way worth surfacing.
+    pending_tool_calls: dict[str, tuple[float, str]] = field(default_factory=dict)
+    stall_notified: set[str] = field(default_factory=set)
+
     temp_history: list[str] = field(default_factory=list)
     last_temp_alarm: float = 0.0
 

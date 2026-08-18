@@ -1,75 +1,60 @@
 {
   "start_welcome": "Tether bağlandı. Aşağıdaki butonları veya her şey için /menu komutunu kullan.",
   "help_text": "/menu - tüm komut menüsü\n/sessions - oturumları listele ve geç\n/screen <pencere> - pencere görüntüsü al\n/model <isim> - model değiştir\n/effort <seviye> - effort değiştir\n/cmd <komut> - PowerShell komutu çalıştır\n/clear - giriş kutusunu temizle\n/stop - mevcut üretimi durdur\n/kill - terminal/emulator/Claude'u kapat\n/status - mevcut model, effort, sıcaklıklar\n/language - dil değiştir\n/mode - çıktı ayrıntı düzeyini değiştir\n/confirm on|off - gönderim onayını aç/kapat\n/settings - ayarları görüntüle/düzenle\n/help - bu mesaj",
-
   "btn_status": "📊 Durum",
   "btn_screen": "📸 Ekran",
   "btn_stop": "⏹ Durdur",
   "btn_sessions": "📋 Oturumlar",
   "btn_menu": "⚙️ Menü",
   "btn_back": "← Geri",
-
   "menu_title": "Ne yapmak istersin?",
   "menu_session": "💬 Oturum",
   "menu_screen": "📸 Ekran",
   "menu_system": "🖥 Sistem",
   "menu_settings": "⚙️ Ayarlar",
-
   "menu_session_title": "Oturum",
   "menu_screen_title": "Ekran",
   "menu_system_title": "Sistem",
   "menu_settings_title": "Ayarlar",
-
   "sessions_title": "Oturumlar (geçmek için dokun):",
   "sessions_none": "Oturum bulunamadı.",
   "session_running": "🟢 Çalışıyor",
   "session_idle": "⚪ Boşta",
   "session_switched": "Geçildi: {name}",
   "session_switch_failed": "O oturuma geçilemedi.",
-
   "window_not_found": "Pencere bulunamadı: {window}",
   "screenshot_caption": "{window}",
-
   "model_usage": "Kullanım: /model <{options}>",
   "model_status": "Model: {model}\nEffort: {effort}\n\n{usage}",
   "model_set": "Model '{model}' olarak ayarlandı.",
   "model_unknown": "Bilinmeyen model: {target}. Seçenekler: {options}",
   "model_dropdown_not_found": "Model/effort düğmeleri bulunamadı.",
   "model_option_not_found": "'{match}' açılır menüde bulunamadı.",
-
   "effort_usage": "Kullanım: /effort <{options}>",
   "effort_unknown": "Bilinmeyen seviye: {target}. Seçenekler: {options}",
   "effort_current_unreadable": "Mevcut effort seviyesi okunamadı.",
   "effort_set": "Effort '{level}' olarak ayarlandı.",
   "effort_set_failed": "Effort ayarlanamadı — beklenen '{expected}', okunan '{actual}'.",
-
   "focus_failed": "Pencereye odaklanamadım, işlem iptal edildi.",
-
   "cmd_usage": "Kullanım: /cmd <komut>",
   "cmd_output": "```\n{output}\n```",
   "cmd_no_output": "Komut çalıştırıldı (çıktı yok).",
   "cmd_error": "Hata:\n`{error}`",
-
   "clear_done": "Giriş kutusu temizlendi.",
   "stop_sent": "Durdurma gönderildi.",
-
   "language_prompt": "Bir dil seç:",
   "language_set": "Dil {language} olarak ayarlandı.",
-
   "mode_prompt": "Çıktı ayrıntı düzeyini seç:",
   "mode_live": "🔴 Canlı — düşünce + metni anında aktar",
   "mode_summary": "📄 Özet — sadece nihai yanıtlar",
   "mode_quiet": "🔇 Sessiz — sadece uyarı ve sorular",
   "mode_verbose": "📢 Ayrıntılı — araç çağrıları dahil her şey",
   "mode_set": "Çıktı modu {mode} olarak ayarlandı.",
-
   "confirm_prompt": "Gönderim öncesi onay şu an {state}.",
   "confirm_on": "açık",
   "confirm_off": "kapalı",
   "confirm_set": "Gönderim öncesi onay: {state}.",
-
   "settings_title": "Mevcut ayarlar:\n{settings}",
-
   "staged_message_prompt": "Gönderilmek üzere:\n\n{text}",
   "staged_send": "✅ Gönder",
   "staged_edit": "✏️ Düzenle",
@@ -78,19 +63,14 @@
   "staged_cancelled": "İptal edildi.",
   "staged_edit_prompt": "Yerine geçecek yeni metni gönder.",
   "staged_send_failed": "Mesajın gönderildiği doğrulanamadı — pencereyi kontrol et.",
-
   "temp_report": "CPU: {cpu}\nGPU: {gpu} (fan {fan})",
   "temp_unavailable": "okunamadı",
   "temp_emergency": "🔥 ACİL: sıcaklık {threshold}°C veya üzerinde!\n{report}",
-
   "usage_limit_alert": "🚫 Claude kullanım limitine takılmış görünüyor ({minutes} dk, {streak} ardışık kontrol, yanıt yok).",
-
   "dialog_alert": "⚠️ Bir pencere açıldı: \"{name}\"\nDüğmeler: {buttons}",
   "activity_done": "✅ {name} tamamlandı.",
-
   "error_generic": "Hata: {error}",
   "claude_not_found": "Claude penceresi bulunamadı.",
-
   "kill_menu_title": "Hangisi kapatılsın?",
   "kill_terminal": "Terminal",
   "kill_emulator": "Emulator",
@@ -98,10 +78,19 @@
   "kill_terminal_done": "Terminal konumu sıfırlandı.",
   "kill_emulator_done": "Emulator kapatıldı.",
   "kill_claude_done": "Claude kapatıldı.",
-
   "ask_timeout": "({timeout} saniye içinde yanıt yok)",
   "ask_question_prefix": "❓ Ajan soruyor:",
-
   "not_authorized": "Yetkiniz yok.",
-  "unauthenticated_reply": "Bu sohbetin bu botu kullanma yetkisi yok."
+  "unauthenticated_reply": "Bu sohbetin bu botu kullanma yetkisi yok.",
+  "btn_keypad": "Tuş Takımı",
+  "keypad_title": "Uygulamaya tuş gönder:",
+  "key_yes": "y",
+  "key_no": "n",
+  "key_enter": "Enter",
+  "key_escape": "Esc",
+  "key_tab": "Tab",
+  "key_mode": "Mod (Shift+Tab)",
+  "key_sent": "Gönderildi: {key}",
+  "key_failed": "Tuş gönderilemedi - pencere odakta değil.",
+  "prompt_detected": "Uygulama yanıt bekliyor:\n\n{text}"
 }

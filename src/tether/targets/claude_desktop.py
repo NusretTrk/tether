@@ -130,6 +130,39 @@ class ClaudeDesktopTarget:
         pyautogui.press("delete")
         return True
 
+    # Keys that can be sent to whatever prompt is on screen. Agent tools put
+    # up numbered choices ("1. yes  2. no  3. always"), y/n confirmations,
+    # and free dialogs; without a way to answer these remotely you are stuck
+    # watching a blocked session you cannot unblock.
+    ALLOWED_KEYS = {
+        "1", "2", "3", "4", "5", "y", "n", "a",
+        "enter", "escape", "tab", "space", "backspace",
+        "up", "down", "left", "right",
+    }
+
+    def send_key(self, key: str) -> bool:
+        """Sends a single keystroke to the focused target window.
+        `key` may also be 'shift+tab' for mode cycling."""
+        key = key.lower().strip()
+
+        # Validate before touching the window. Focusing first would let a
+        # rejected key still yank focus away from whatever the user is doing.
+        is_chord = key == "shift+tab"
+        if not is_chord and key not in self.ALLOWED_KEYS:
+            log.warning("refusing to send unrecognised key %r", key)
+            return False
+
+        hwnd = self._hwnd()
+        if not hwnd or not focus_window(hwnd):
+            return False
+        time.sleep(0.15)
+
+        if is_chord:
+            pyautogui.hotkey("shift", "tab")
+        else:
+            pyautogui.press(key)
+        return True
+
     def press_escape(self) -> bool:
         hwnd = self._hwnd()
         if not hwnd or not focus_window(hwnd):
