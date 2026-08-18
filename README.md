@@ -137,7 +137,7 @@ pip install -r requirements-dev.txt
 pytest tests/ -v
 ```
 
-All 49 tests are GUI-independent — they run on any machine, no Claude
+All 56 tests are GUI-independent — they run on any machine, no Claude
 window or Windows accessibility stack required.
 
 ## License
