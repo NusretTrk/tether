@@ -33,6 +33,7 @@ BOT_COMMANDS = [
     BotCommand("stop", "Stop the current generation"),
     BotCommand("kill", "Close terminal/emulator/Claude"),
     BotCommand("keys", "Send a key to the app (answer prompts)"),
+    BotCommand("window", "Change which window Claude/AVD points at"),
     BotCommand("status", "Current model, effort, temps"),
     BotCommand("language", "Change language"),
     BotCommand("mode", "Change output verbosity"),
@@ -64,6 +65,7 @@ def _build_app(config: Config) -> Application:
     app.add_handler(CommandHandler("stop", handlers.cmd_stop))
     app.add_handler(CommandHandler("kill", handlers.cmd_kill))
     app.add_handler(CommandHandler("keys", handlers.cmd_keys))
+    app.add_handler(CommandHandler("window", handlers.cmd_window))
     app.add_handler(CommandHandler("status", handlers.cmd_status))
     app.add_handler(CommandHandler("language", handlers.cmd_language))
     app.add_handler(CommandHandler("mode", handlers.cmd_mode))

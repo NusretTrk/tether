@@ -92,5 +92,10 @@
   "key_mode": "Modo (Shift+Tab)",
   "key_sent": "Enviado: {key}",
   "key_failed": "No se pudo enviar la tecla - ventana sin foco.",
-  "prompt_detected": "La app espera una respuesta:\n\n{text}"
+  "prompt_detected": "La app espera una respuesta:\n\n{text}",
+  "key_all": "a",
+  "key_space": "Espacio",
+  "key_backspace": "←Bksp",
+  "window_usage": "Uso: /window <claude|avd> <título de ventana>",
+  "window_set": "Ventana {which} establecida en: {keyword}"
 }

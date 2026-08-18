@@ -62,6 +62,6 @@ class AppState:
         return AppState(
             config=config,
             target=target,
-            activity_watcher=ActivityWatcher(target),
+            activity_watcher=ActivityWatcher(target, config.settings.activity_ignore_substrings),
             dialog_watcher=DialogWatcher(target),
         )

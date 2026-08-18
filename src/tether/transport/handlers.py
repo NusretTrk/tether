@@ -180,8 +180,32 @@ async def cmd_kill(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @restricted
 async def cmd_keys(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    _, _t = _ctx(context)
-    await update.message.reply_text(_t("keypad_title"), reply_markup=menus.keypad_menu(_t))
+    state, _t = _ctx(context)
+    await update.message.reply_text(
+        _t("keypad_title"), reply_markup=menus.keypad_menu(_t, state.config.settings.custom_keys)
+    )
+
+
+@restricted
+async def cmd_window(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/window <claude|avd> <title keyword> - which window each target
+    points at is a guess at a title substring; when it's wrong (a renamed
+    emulator, a different app entirely) there was no way to fix it short of
+    editing config.yaml by hand and restarting."""
+    state, _t = _ctx(context)
+    if len(context.args) < 2:
+        await update.message.reply_text(_t("window_usage"))
+        return
+    which, keyword = context.args[0].lower(), " ".join(context.args[1:])
+    if which not in ("claude", "avd"):
+        await update.message.reply_text(_t("window_usage"))
+        return
+    if which == "claude":
+        state.config.settings.claude_window_keyword = keyword
+    else:
+        state.config.settings.avd_window_keyword = keyword
+    state.config.settings.save()
+    await update.message.reply_text(_t("window_set", which=which, keyword=keyword))
 
 
 @restricted

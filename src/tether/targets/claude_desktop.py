@@ -28,6 +28,13 @@ from PIL import Image
 from tether.platform import uia
 from tether.platform.capabilities import CAPABILITIES
 
+if CAPABILITIES.accessibility:
+    from _ctypes import COMError
+else:
+    class COMError(Exception):
+        """Placeholder so except COMError is always valid, even where
+        accessibility support (and the real COMError type) doesn't exist."""
+
 if CAPABILITIES.window_control:
     import win32gui
 from tether.platform.ocr import find_input_box_anchor, ocr_find_word, ocr_text
@@ -210,7 +217,13 @@ class ClaudeDesktopTarget:
             uia.warm_up(win)
             named = uia.collect_named_controls(win)
             return [Session(name=n, running=r) for n, r in uia.parse_sessions(named)]
-        return uia.run_on_uia_thread(_work)
+        try:
+            return uia.run_on_uia_thread(_work)
+        except COMError:
+            # A live tree changing mid-walk is expected, not a fault worth
+            # surfacing — the next poll a few seconds later just tries again.
+            log.debug("list_sessions: transient COM error, skipping this poll")
+            return []
 
     def switch_session(self, name: str) -> bool:
         if not CAPABILITIES.accessibility:
@@ -231,7 +244,11 @@ class ClaudeDesktopTarget:
                         log.warning("session switch click failed: %s", e)
                         return False
             return False
-        return uia.run_on_uia_thread(_work)
+        try:
+            return uia.run_on_uia_thread(_work)
+        except COMError:
+            log.debug("switch_session: transient COM error")
+            return False
 
     # ---- dialogs (UIA) ----
 
@@ -246,7 +263,11 @@ class ClaudeDesktopTarget:
             uia.warm_up(win)
             named = uia.collect_named_controls(win)
             return [Dialog(name=n, buttons=b) for n, b in uia.detect_dialogs(named)]
-        return uia.run_on_uia_thread(_work)
+        try:
+            return uia.run_on_uia_thread(_work)
+        except COMError:
+            log.debug("detect_dialogs: transient COM error, skipping this poll")
+            return []
 
     # ---- model / effort (pixel-driven, verified live) ----
 

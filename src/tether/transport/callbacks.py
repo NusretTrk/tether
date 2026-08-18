@@ -45,13 +45,15 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 await edit(_t("menu_session_title"), menus.session_menu(_t, sessions))
         elif target == "screen":
-            await edit(_t("menu_screen_title"), menus.screen_menu(_t))
+            await edit(_t("menu_screen_title"), menus.screen_menu(
+                _t, state.config.settings.claude_window_keyword, state.config.settings.avd_window_keyword
+            ))
         elif target == "system":
             await edit(_t("menu_system_title"), menus.system_menu(_t))
         elif target == "settings":
             await edit(_t("menu_settings_title"), menus.settings_menu(_t))
         elif target == "keypad":
-            await edit(_t("keypad_title"), menus.keypad_menu(_t))
+            await edit(_t("keypad_title"), menus.keypad_menu(_t, state.config.settings.custom_keys))
         return
 
     # ---- remote keypad ----
@@ -92,7 +94,9 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             from tether.targets.claude_desktop import MODEL_NAMES
             result = await asyncio.to_thread(state.target.set_model, name)
             if result:
-                await edit(_t("model_set", model=result), menus.screen_menu(_t))
+                await edit(_t("model_set", model=result), menus.screen_menu(
+                    _t, state.config.settings.claude_window_keyword, state.config.settings.avd_window_keyword
+                ))
             else:
                 await edit(_t("model_unknown", target=name, options=", ".join(MODEL_NAMES)), menus.model_menu(_t))
         return
@@ -107,7 +111,9 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             from tether.targets.claude_desktop import EFFORT_LEVELS
             result = await asyncio.to_thread(state.target.set_effort, level)
             if result:
-                await edit(_t("effort_set", level=result), menus.screen_menu(_t))
+                await edit(_t("effort_set", level=result), menus.screen_menu(
+                    _t, state.config.settings.claude_window_keyword, state.config.settings.avd_window_keyword
+                ))
             else:
                 await edit(_t("effort_unknown", target=level, options=", ".join(EFFORT_LEVELS)), menus.effort_menu(_t))
         return

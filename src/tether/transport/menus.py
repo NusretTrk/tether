@@ -48,10 +48,13 @@ def session_menu(_t, sessions: list) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(rows)
 
 
-def screen_menu(_t) -> InlineKeyboardMarkup:
+def screen_menu(_t, claude_keyword: str = "Claude", avd_keyword: str = "Emulator") -> InlineKeyboardMarkup:
+    """Button labels show the actual configured window keyword, not a fixed
+    'AVD' — that name never changes even after /window avd renames the
+    target, which made the button misleading once you'd actually used it."""
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("Claude", callback_data="screen:claude")],
-        [InlineKeyboardButton("AVD", callback_data="screen:avd")],
+        [InlineKeyboardButton(claude_keyword, callback_data="screen:claude")],
+        [InlineKeyboardButton(avd_keyword, callback_data="screen:avd")],
         [InlineKeyboardButton("Model", callback_data="model:menu"), InlineKeyboardButton("Effort", callback_data="effort:menu")],
         [back_button(_t)],
     ])
@@ -115,12 +118,21 @@ def confirm_menu(_t) -> InlineKeyboardMarkup:
     ])
 
 
-def keypad_menu(_t) -> InlineKeyboardMarkup:
-    """Remote keyboard for answering prompts the agent puts on screen."""
-    return InlineKeyboardMarkup([
+def keypad_menu(_t, custom_keys: dict[str, str] | None = None) -> InlineKeyboardMarkup:
+    """Remote keyboard for answering prompts the agent puts on screen.
+
+    Rows cover the full ALLOWED_KEYS set in claude_desktop.py — a key that
+    can be sent but has no button is a dead feature, which is exactly what
+    4/5/a/space/backspace/left/right were until this covered them too.
+    `custom_keys` (from Settings.custom_keys, label -> key) appends
+    whatever the user has defined in config.yaml as extra rows."""
+    rows = [
         [InlineKeyboardButton("1", callback_data="key:1"),
          InlineKeyboardButton("2", callback_data="key:2"),
          InlineKeyboardButton("3", callback_data="key:3")],
+        [InlineKeyboardButton("4", callback_data="key:4"),
+         InlineKeyboardButton("5", callback_data="key:5"),
+         InlineKeyboardButton(_t("key_all"), callback_data="key:a")],
         [InlineKeyboardButton(_t("key_yes"), callback_data="key:y"),
          InlineKeyboardButton(_t("key_no"), callback_data="key:n"),
          InlineKeyboardButton(_t("key_enter"), callback_data="key:enter")],
@@ -128,9 +140,16 @@ def keypad_menu(_t) -> InlineKeyboardMarkup:
          InlineKeyboardButton(_t("key_tab"), callback_data="key:tab"),
          InlineKeyboardButton(_t("key_mode"), callback_data="key:shift+tab")],
         [InlineKeyboardButton("↑", callback_data="key:up"),
-         InlineKeyboardButton("↓", callback_data="key:down")],
-        [back_button(_t)],
-    ])
+         InlineKeyboardButton("↓", callback_data="key:down"),
+         InlineKeyboardButton("←", callback_data="key:left"),
+         InlineKeyboardButton("→", callback_data="key:right")],
+        [InlineKeyboardButton(_t("key_space"), callback_data="key:space"),
+         InlineKeyboardButton(_t("key_backspace"), callback_data="key:backspace")],
+    ]
+    for label, key in (custom_keys or {}).items():
+        rows.append([InlineKeyboardButton(label, callback_data=f"key:{key}")])
+    rows.append([back_button(_t)])
+    return InlineKeyboardMarkup(rows)
 
 
 def prompt_reply_keyboard(_t) -> InlineKeyboardMarkup:

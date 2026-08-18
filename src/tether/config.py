@@ -88,6 +88,18 @@ class Settings:
 
     dialog_watch_enabled: bool = True
     stall_watch_enabled: bool = True
+    # Substrings (case-insensitive) of session names to never notify
+    # about finishing. Defaults to the session tether itself typically
+    # runs inside of — without this, the bot notifies about its own
+    # conversation going idle every time it finishes replying.
+    activity_ignore_substrings: list[str] = field(
+        default_factory=lambda: ["Telegram PC control", "window capture"]
+    )
+
+    # Extra keypad buttons: {button label: key to send}. The key must
+    # still pass ClaudeDesktopTarget.ALLOWED_KEYS - this only controls
+    # what's offered as a shortcut, not what's permitted to be sent.
+    custom_keys: dict[str, str] = field(default_factory=dict)
     activity_watch_enabled: bool = True
 
     def validate(self) -> list[str]:

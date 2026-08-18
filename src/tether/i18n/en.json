@@ -92,5 +92,10 @@
   "key_mode": "Mode (Shift+Tab)",
   "key_sent": "Sent: {key}",
   "key_failed": "Couldn't send that key - window not focused.",
-  "prompt_detected": "The app is waiting for an answer:\n\n{text}"
+  "prompt_detected": "The app is waiting for an answer:\n\n{text}",
+  "key_all": "a",
+  "key_space": "Space",
+  "key_backspace": "←Bksp",
+  "window_usage": "Usage: /window <claude|avd> <window title keyword>",
+  "window_set": "{which} window set to match: {keyword}"
 }

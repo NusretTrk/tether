@@ -92,5 +92,10 @@
   "key_mode": "Mod (Shift+Tab)",
   "key_sent": "Gönderildi: {key}",
   "key_failed": "Tuş gönderilemedi - pencere odakta değil.",
-  "prompt_detected": "Uygulama yanıt bekliyor:\n\n{text}"
+  "prompt_detected": "Uygulama yanıt bekliyor:\n\n{text}",
+  "key_all": "a",
+  "key_space": "Boşluk",
+  "key_backspace": "←Sil",
+  "window_usage": "Kullanım: /window <claude|avd> <pencere başlığı>",
+  "window_set": "{which} penceresi şuna ayarlandı: {keyword}"
 }

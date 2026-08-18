@@ -20,6 +20,7 @@ from tether.platform.capabilities import CAPABILITIES, UnsupportedOnThisPlatform
 if CAPABILITIES.accessibility:
     import pythoncom
     import uiautomation as auto
+    from _ctypes import COMError
 
 log = logging.getLogger(__name__)
 
@@ -75,8 +76,16 @@ def find_root_window(keyword: str):
     if not CAPABILITIES.accessibility:
         raise UnsupportedOnThisPlatform("Reading the accessibility tree")
     _ensure_com_initialized()
-    for w in auto.GetRootControl().GetChildren():
-        if keyword.lower() in (w.Name or "").lower():
+    try:
+        children = auto.GetRootControl().GetChildren()
+    except COMError:
+        return None
+    for w in children:
+        try:
+            name = (w.Name or "").lower()
+        except COMError:
+            continue
+        if keyword.lower() in name:
             return w
     return None
 
@@ -88,7 +97,11 @@ def _walk_count(control, max_depth: int = 25) -> int:
         nonlocal count
         if d > max_depth:
             return
-        for ch in c.GetChildren():
+        try:
+            children = c.GetChildren()
+        except COMError:
+            return  # element went stale mid-walk, treat as a leaf
+        for ch in children:
             count += 1
             _rec(ch, d + 1)
 
@@ -110,16 +123,30 @@ def warm_up(control, retries: int = 4, settle_delay: float = 0.4) -> int:
 
 
 def collect_named_controls(control, max_depth: int = 25) -> list[tuple[str, str]]:
-    """Returns [(control_type, name), ...] for every named descendant."""
+    """Returns [(control_type, name), ...] for every named descendant.
+
+    A live UI tree changes while it's being walked (elements appear,
+    disappear, go stale) - reading .Name or .ControlTypeName on a stale
+    element raises COMError, which is expected here and not a real fault.
+    Verified live: this crashed dialog_job with exactly that error while a
+    response was streaming into the chat, mid-walk."""
     out: list[tuple[str, str]] = []
 
     def _rec(c, d):
         if d > max_depth:
             return
-        for ch in c.GetChildren():
-            name = (ch.Name or "").strip()
+        try:
+            children = c.GetChildren()
+        except COMError:
+            return
+        for ch in children:
+            try:
+                name = (ch.Name or "").strip()
+                ctype = ch.ControlTypeName
+            except COMError:
+                continue  # this element went stale — skip it, keep walking
             if name:
-                out.append((ch.ControlTypeName, name))
+                out.append((ctype, name))
             _rec(ch, d + 1)
 
     _rec(control, 0)
@@ -135,10 +162,20 @@ def find_control_by_name(control, name: str, control_type: str | None = None, ma
     def _rec(c, d):
         if d > max_depth or result[0] is not None:
             return
-        for ch in c.GetChildren():
+        try:
+            children = c.GetChildren()
+        except COMError:
+            return
+        for ch in children:
             if result[0] is not None:
                 return
-            if (ch.Name or "").strip() == name and (control_type is None or ch.ControlTypeName == control_type):
+            try:
+                matched = (ch.Name or "").strip() == name and (
+                    control_type is None or ch.ControlTypeName == control_type
+                )
+            except COMError:
+                continue
+            if matched:
                 result[0] = ch
                 return
             _rec(ch, d + 1)

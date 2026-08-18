@@ -92,5 +92,10 @@
   "key_mode": "Modus (Shift+Tab)",
   "key_sent": "Gesendet: {key}",
   "key_failed": "Taste nicht gesendet - Fenster nicht fokussiert.",
-  "prompt_detected": "Die App wartet auf eine Antwort:\n\n{text}"
+  "prompt_detected": "Die App wartet auf eine Antwort:\n\n{text}",
+  "key_all": "a",
+  "key_space": "Leer",
+  "key_backspace": "←Rückt.",
+  "window_usage": "Verwendung: /window <claude|avd> <Fenstertitel>",
+  "window_set": "{which}-Fenster gesetzt auf: {keyword}"
 }
