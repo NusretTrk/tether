@@ -32,6 +32,10 @@ class AppState:
     usage_limit_streak: int = 0
     usage_limit_alerted: bool = False
 
+    # error signature -> monotonic time last forwarded to Telegram,
+    # so a repeating fault doesn't flood the chat (see error_handler).
+    error_notify_times: dict[str, float] = field(default_factory=dict)
+
     temp_history: list[str] = field(default_factory=list)
     last_temp_alarm: float = 0.0
 

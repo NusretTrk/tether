@@ -17,9 +17,13 @@ _shell_cwd = os.path.expanduser("~")
 
 async def run_cmd(command: str, timeout: int = 60) -> str:
     global _shell_cwd
+    # PowerShell escapes a single quote inside a single-quoted string by
+    # doubling it. Without this, any directory with an apostrophe in the
+    # name breaks the generated script.
+    safe_cwd = _shell_cwd.replace("'", "''")
     script = (
         "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
-        f"Set-Location -LiteralPath '{_shell_cwd}'; "
+        f"Set-Location -LiteralPath '{safe_cwd}'; "
         f"{command}; "
         'Write-Output "___CWD___$((Get-Location).Path)"'
     )

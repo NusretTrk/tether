@@ -80,7 +80,17 @@ def test_stranger_chat_id_is_blocked():
 
     update = _run(handler, STRANGER_CHAT_ID)
     assert called == [], "handler ran for an unauthorized chat id"
-    assert len(update.message.replies) == 1  # told them no, did nothing else
+
+
+def test_stranger_gets_no_reply_at_all():
+    """Silence is deliberate. Replying would confirm the bot is live and let
+    anyone burn the account's rate limit by spamming it."""
+    @restricted
+    async def handler(update, context):
+        pass
+
+    update = _run(handler, STRANGER_CHAT_ID)
+    assert update.message.replies == [], "bot revealed itself to an unauthorized chat"
 
 
 @pytest.mark.parametrize("chat_id", [0, -1, STRANGER_CHAT_ID, ALLOWED_CHAT_ID + 1])

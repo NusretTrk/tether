@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import functools
 import io
+import logging
+import time
 
 from telegram import InputFile, Update
 from telegram.ext import ContextTypes
@@ -15,13 +17,21 @@ from tether.transport import menus
 
 
 def restricted(handler):
+    """Drops anything not from the configured chat id.
+
+    Deliberately silent: replying would confirm to a stranger that the bot
+    is live and configured, and would let anyone trigger unlimited outbound
+    messages by spamming it (burning the account's rate limit, or worse).
+    Unauthorized attempts are logged locally instead."""
     @functools.wraps(handler)
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
         state = context.bot_data["state"]
-        if update.effective_chat.id != state.config.secrets.chat_id:
-            _t = make_translator(state.config.settings.language)
-            if update.message:
-                await update.message.reply_text(_t("unauthenticated_reply"))
+        chat = update.effective_chat
+        if chat is None or chat.id != state.config.secrets.chat_id:
+            logging.getLogger(__name__).warning(
+                "ignored update from unauthorized chat id %s",
+                chat.id if chat else "unknown",
+            )
             return
         return await handler(update, context)
     return wrapper
@@ -200,13 +210,43 @@ async def cmd_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(_t("settings_title", settings=lines), reply_markup=menus.settings_menu(_t))
 
 
+ERROR_NOTIFY_COOLDOWN_SEC = 60
+
+
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
-    import logging
-    logging.getLogger(__name__).error("Unhandled exception", exc_info=context.error)
+    """Logs everything, but notifies Telegram at most once per minute per
+    distinct error.
+
+    A repeating fault can fire many times a second (a COM initialization bug
+    during development produced roughly 30 a minute). Forwarding each one
+    would flood the chat and risk the bot being rate limited by Telegram,
+    which would take out the notifications that actually matter."""
+    log = logging.getLogger(__name__)
+    log.error("Unhandled exception", exc_info=context.error)
+
+    state = context.bot_data.get("state")
+    if not state:
+        return
+
+    signature = f"{type(context.error).__name__}: {context.error}"
+    now = time.monotonic()
+    last_sent = state.error_notify_times.get(signature, 0.0)
+    if now - last_sent < ERROR_NOTIFY_COOLDOWN_SEC:
+        return
+    state.error_notify_times[signature] = now
+
+    # Keep the dict from growing without bound on a long-running process.
+    if len(state.error_notify_times) > 50:
+        cutoff = now - ERROR_NOTIFY_COOLDOWN_SEC
+        state.error_notify_times = {
+            k: v for k, v in state.error_notify_times.items() if v > cutoff
+        }
+
     try:
-        state = context.bot_data.get("state")
-        if state:
-            _t = make_translator(state.config.settings.language)
-            await context.bot.send_message(state.config.secrets.chat_id, _t("error_generic", error=str(context.error)))
+        _t = make_translator(state.config.settings.language)
+        await context.bot.send_message(
+            state.config.secrets.chat_id,
+            _t("error_generic", error=str(context.error)[:300]),
+        )
     except Exception:
-        pass
+        log.exception("could not deliver error notification")
