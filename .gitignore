@@ -1,0 +1,14 @@
+.env
+config.yaml
+state/
+@AutomationLog.txt
+*.log
+*.log.*
+__pycache__/
+*.pyc
+.pytest_cache/
+*.png
+*.jpg
+*.egg-info/
+.venv/
+venv/

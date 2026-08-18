@@ -1,0 +1,24 @@
+# Copy to config.yaml to customize (config.yaml is gitignored, edit freely).
+# Also editable live from Telegram via /settings — changes there rewrite this file.
+# Invalid values fall back to the default below with a logged warning, not a crash.
+
+language: en                    # en | tr | de | es
+output_mode: summary            # live | summary | quiet | verbose
+confirm_before_send: true       # stage Send/Edit/Cancel buttons before delivering a typed message
+
+claude_window_keyword: Claude   # substring used to find the Claude Desktop window
+avd_window_keyword: Emulator    # substring used to find the Android emulator window
+
+temp_check_interval_sec: 300    # how often to sample CPU/GPU temperature
+temp_report_every_n_checks: 3   # send a summary report every N checks
+temp_emergency_c: 90            # push an immediate alert at/above this temperature
+
+usage_limit_check_interval_sec: 300
+usage_limit_confirm_streak: 3   # consecutive detections required before alerting (filters OCR flicker)
+
+stream_edit_throttle_sec: 2.5   # minimum seconds between message edits while streaming
+transcript_poll_interval_sec: 1.0
+uia_poll_interval_sec: 3.0
+
+dialog_watch_enabled: true      # alert on popups/dialogs (e.g. "sign in again")
+activity_watch_enabled: true    # notify when a Running session goes Idle

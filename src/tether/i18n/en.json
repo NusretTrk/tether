@@ -1,0 +1,107 @@
+{
+  "start_welcome": "Tether is connected. Use the buttons below or /menu for everything.",
+  "help_text": "/menu - full command menu\n/sessions - list and switch sessions\n/screen <window> - screenshot a window\n/model <name> - switch model\n/effort <level> - switch effort\n/cmd <command> - run a PowerShell command\n/clear - clear the input box\n/stop - stop the current generation\n/kill - close terminal/emulator/Claude\n/status - current model, effort, temps\n/language - change language\n/mode - change output verbosity\n/confirm on|off - toggle send confirmation\n/settings - view/edit settings\n/help - this message",
+
+  "btn_status": "📊 Status",
+  "btn_screen": "📸 Screen",
+  "btn_stop": "⏹ Stop",
+  "btn_sessions": "📋 Sessions",
+  "btn_menu": "⚙️ Menu",
+  "btn_back": "← Back",
+
+  "menu_title": "What do you want to do?",
+  "menu_session": "💬 Session",
+  "menu_screen": "📸 Screen",
+  "menu_system": "🖥 System",
+  "menu_settings": "⚙️ Settings",
+
+  "menu_session_title": "Session",
+  "menu_screen_title": "Screen",
+  "menu_system_title": "System",
+  "menu_settings_title": "Settings",
+
+  "sessions_title": "Sessions (tap to switch):",
+  "sessions_none": "No sessions found.",
+  "session_running": "🟢 Running",
+  "session_idle": "⚪ Idle",
+  "session_switched": "Switched to: {name}",
+  "session_switch_failed": "Couldn't switch to that session.",
+
+  "window_not_found": "Window not found: {window}",
+  "screenshot_caption": "{window}",
+
+  "model_usage": "Usage: /model <{options}>",
+  "model_status": "Model: {model}\nEffort: {effort}\n\n{usage}",
+  "model_set": "Model set to '{model}'.",
+  "model_unknown": "Unknown model: {target}. Options: {options}",
+  "model_dropdown_not_found": "Couldn't find the model/effort controls.",
+  "model_option_not_found": "'{match}' wasn't found in the dropdown.",
+
+  "effort_usage": "Usage: /effort <{options}>",
+  "effort_unknown": "Unknown level: {target}. Options: {options}",
+  "effort_current_unreadable": "Couldn't read the current effort level.",
+  "effort_set": "Effort set to '{level}'.",
+  "effort_set_failed": "Effort change failed — expected '{expected}', read '{actual}'.",
+
+  "focus_failed": "Couldn't focus the window, aborted.",
+
+  "cmd_usage": "Usage: /cmd <command>",
+  "cmd_output": "```\n{output}\n```",
+  "cmd_no_output": "Command ran (no output).",
+  "cmd_error": "Error:\n`{error}`",
+
+  "clear_done": "Input box cleared.",
+  "stop_sent": "Stop sent.",
+
+  "language_prompt": "Choose a language:",
+  "language_set": "Language set to {language}.",
+
+  "mode_prompt": "Choose output verbosity:",
+  "mode_live": "🔴 Live — stream thinking + text as it happens",
+  "mode_summary": "📄 Summary — final replies only",
+  "mode_quiet": "🔇 Quiet — alerts and questions only",
+  "mode_verbose": "📢 Verbose — everything, including tool calls",
+  "mode_set": "Output mode set to {mode}.",
+
+  "confirm_prompt": "Confirm before sending is currently {state}.",
+  "confirm_on": "on",
+  "confirm_off": "off",
+  "confirm_set": "Confirm before sending: {state}.",
+
+  "settings_title": "Current settings:\n{settings}",
+
+  "staged_message_prompt": "About to send:\n\n{text}",
+  "staged_send": "✅ Send",
+  "staged_edit": "✏️ Edit",
+  "staged_cancel": "❌ Cancel",
+  "staged_sent": "Sent.",
+  "staged_cancelled": "Cancelled.",
+  "staged_edit_prompt": "Send the new text to replace it.",
+  "staged_send_failed": "Message wasn't confirmed as sent — check the window.",
+
+  "temp_report": "CPU: {cpu}\nGPU: {gpu} (fan {fan})",
+  "temp_unavailable": "unavailable",
+  "temp_emergency": "🔥 EMERGENCY: temperature at/above {threshold}°C!\n{report}",
+
+  "usage_limit_alert": "🚫 Claude usage limit appears to be hit ({minutes} min, {streak} consecutive checks, no reply).",
+
+  "dialog_alert": "⚠️ Dialog appeared: \"{name}\"\nButtons: {buttons}",
+  "activity_done": "✅ {name} finished.",
+
+  "error_generic": "Error: {error}",
+  "claude_not_found": "Claude window not found.",
+
+  "kill_menu_title": "Close which one?",
+  "kill_terminal": "Terminal",
+  "kill_emulator": "Emulator",
+  "kill_claude": "Claude",
+  "kill_terminal_done": "Terminal position reset.",
+  "kill_emulator_done": "Emulator closed.",
+  "kill_claude_done": "Claude closed.",
+
+  "ask_timeout": "(no answer within {timeout}s)",
+  "ask_question_prefix": "❓ Agent is asking:",
+
+  "not_authorized": "Not authorized.",
+  "unauthenticated_reply": "This chat isn't authorized to use this bot."
+}
