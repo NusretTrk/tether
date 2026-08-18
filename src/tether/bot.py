@@ -16,7 +16,8 @@ from tether.transport.callbacks import handle_callback
 from tether.transport.state import AppState
 from tether.transport.text import handle_photo, handle_text
 from tether.transport.jobs import (
-    activity_job, dialog_job, stall_job, temp_monitor_job, transcript_job, usage_limit_job,
+    activity_job, app_health_job, dialog_job, stall_job, temp_monitor_job,
+    transcript_job, usage_limit_job,
 )
 
 log = logging.getLogger(__name__)
@@ -32,6 +33,8 @@ BOT_COMMANDS = [
     BotCommand("clear", "Clear the input box"),
     BotCommand("stop", "Stop the current generation"),
     BotCommand("kill", "Close terminal/emulator/Claude"),
+    BotCommand("restart", "Restart Claude Desktop cleanly"),
+    BotCommand("launch", "Start Claude Desktop if it is not running"),
     BotCommand("keys", "Send a key to the app (answer prompts)"),
     BotCommand("window", "Change which window Claude/AVD points at"),
     BotCommand("status", "Current model, effort, temps"),
@@ -64,6 +67,8 @@ def _build_app(config: Config) -> Application:
     app.add_handler(CommandHandler("clear", handlers.cmd_clear))
     app.add_handler(CommandHandler("stop", handlers.cmd_stop))
     app.add_handler(CommandHandler("kill", handlers.cmd_kill))
+    app.add_handler(CommandHandler("restart", handlers.cmd_restart))
+    app.add_handler(CommandHandler("launch", handlers.cmd_launch))
     app.add_handler(CommandHandler("keys", handlers.cmd_keys))
     app.add_handler(CommandHandler("window", handlers.cmd_window))
     app.add_handler(CommandHandler("status", handlers.cmd_status))
@@ -89,6 +94,10 @@ def _build_app(config: Config) -> Application:
     else:
         log.info("accessibility features unavailable on %s - session and dialog watchers disabled", platform_name())
     app.job_queue.run_repeating(stall_job, interval=15, first=30)
+    if CAPABILITIES.window_control:
+        app.job_queue.run_repeating(
+            app_health_job, interval=settings.app_health_check_interval_sec, first=25,
+        )
 
     return app
 

@@ -165,7 +165,11 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 subprocess.run(["taskkill", "/F", "/T", "/IM", proc_name], capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
             await edit(_t("kill_emulator_done"), menus.kill_menu(_t))
         elif action == "claude":
-            subprocess.run(["taskkill", "/F", "/IM", "Claude.exe"], capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW)
+            # Path-filtered, not `taskkill /IM Claude.exe`. The Claude Code
+            # CLI shares the exe name, so a name-based kill takes that out
+            # too - frequently the very agent issuing this command.
+            signalled, all_gone = await asyncio.to_thread(state.target.stop_app)
+            log.info("kill claude: signalled %d processes, all exited: %s", signalled, all_gone)
             await edit(_t("kill_claude_done"), menus.kill_menu(_t))
         return
 
@@ -205,6 +209,34 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             state.config.settings.confirm_before_send = on
             state.config.settings.save()
             await edit(_t("confirm_set", state=_t("confirm_on" if on else "confirm_off")), menus.settings_menu(_t))
+        return
+
+    # ---- app lifecycle ----
+    if category == "app":
+        action = parts[1]
+        if action == "cancel":
+            await edit(_t("staged_cancelled"))
+            return
+        if action == "start":
+            ok = await asyncio.to_thread(state.target.launch_app)
+            if not ok:
+                await edit(_t("app_launch_failed"))
+                return
+            appeared = await asyncio.to_thread(state.target.wait_for_window, 60.0)
+            await edit(_t("app_started") if appeared else _t("app_started_no_window"))
+            return
+        if action == "restart":
+            await edit(_t("app_restarting"))
+            ok, reason = await asyncio.to_thread(state.target.restart_app)
+            if ok:
+                # Clear the health baseline so the watcher doesn't report a
+                # transition it didn't observe.
+                state.app_was_running = True
+                state.app_down_notified = False
+                await edit(_t("app_restarted"))
+            else:
+                await edit(_t("app_restart_failed", reason=reason))
+            return
         return
 
     # ---- staged send (confirm-before-send flow) ----

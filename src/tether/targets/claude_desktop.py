@@ -25,7 +25,7 @@ import pyperclip
 import pytesseract
 from PIL import Image
 
-from tether.platform import uia
+from tether.platform import process, uia
 from tether.platform.capabilities import CAPABILITIES
 
 if CAPABILITIES.accessibility:
@@ -55,8 +55,78 @@ INPUT_RIGHT_MARGIN_PX = 400
 class ClaudeDesktopTarget:
     name = "claude-desktop"
 
-    def __init__(self, window_keyword: str = "Claude"):
+    # Claude Desktop runs as many Electron processes all named claude.exe,
+    # and the bundled Claude Code CLI is *also* claude.exe under a different
+    # path. Filtering on this path fragment targets the desktop app without
+    # touching the CLI - verified live: 11 desktop processes, 1 CLI, no
+    # overlap. A name-based kill would have taken out both.
+    DEFAULT_APP_PATH_FILTER = "WindowsApps"
+
+    def __init__(
+        self,
+        window_keyword: str = "Claude",
+        app_path_filter: str = "",
+        launch_command: str = "",
+    ):
         self.window_keyword = window_keyword
+        self.app_path_filter = app_path_filter or self.DEFAULT_APP_PATH_FILTER
+        self.launch_command = launch_command
+
+    # ---- app lifecycle ----
+
+    def list_app_processes(self) -> list:
+        return process.list_processes(name_contains="claude", path_contains=self.app_path_filter)
+
+    def is_app_running(self) -> bool:
+        return bool(self.list_app_processes())
+
+    def resolve_launch_command(self) -> str | None:
+        """Configured command wins; otherwise discover the Store app's
+        AppUserModelID at runtime, since the package family name contains a
+        per-install hash and differs between machines."""
+        if self.launch_command:
+            return self.launch_command
+        return process.find_appx_launch_command("Claude")
+
+    def stop_app(self, timeout: float = 20.0) -> tuple[int, bool]:
+        """Kills the desktop app and waits for every handle to release.
+        Returns (processes signalled, all actually exited)."""
+        procs = self.list_app_processes()
+        if not procs:
+            return (0, True)
+        return process.kill_all(procs, timeout=timeout)
+
+    def launch_app(self) -> bool:
+        cmd = self.resolve_launch_command()
+        if not cmd:
+            log.warning("no launch command available for Claude Desktop")
+            return False
+        return process.launch(cmd)
+
+    def wait_for_window(self, timeout: float = 60.0, poll: float = 1.0) -> bool:
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if self._hwnd():
+                return True
+            time.sleep(poll)
+        return False
+
+    def restart_app(self, stop_timeout: float = 20.0, start_timeout: float = 60.0) -> tuple[bool, str]:
+        """Stop, wait for handles to actually release, then start again.
+
+        The waiting is the point. Relaunching while the old processes still
+        hold file handles is what produces "Another program is currently
+        using this file" - the exact error that motivated this. Returns
+        (ok, reason) so the caller can report which step failed rather than
+        just succeeding or not."""
+        _, all_gone = self.stop_app(timeout=stop_timeout)
+        if not all_gone:
+            return (False, "processes_still_running")
+        if not self.launch_app():
+            return (False, "launch_failed")
+        if not self.wait_for_window(timeout=start_timeout):
+            return (False, "window_never_appeared")
+        return (True, "ok")
 
     # ---- basics ----
 

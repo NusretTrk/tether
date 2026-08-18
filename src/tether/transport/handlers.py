@@ -205,6 +205,34 @@ async def cmd_keys(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 @restricted
+async def cmd_restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Restart Claude Desktop. Confirmed rather than immediate: it ends any
+    live session, which includes the agent issuing the command if one is
+    driving the bot."""
+    state, _t = _ctx(context)
+    running = await asyncio.to_thread(state.target.is_app_running)
+    count = len(await asyncio.to_thread(state.target.list_app_processes))
+    await update.message.reply_text(
+        _t("app_restart_prompt", count=count) if running else _t("app_restart_prompt_stopped"),
+        reply_markup=menus.restart_confirm_keyboard(_t),
+    )
+
+
+@restricted
+async def cmd_launch(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    state, _t = _ctx(context)
+    if await asyncio.to_thread(state.target.is_app_running):
+        await update.message.reply_text(_t("app_already_running"))
+        return
+    ok = await asyncio.to_thread(state.target.launch_app)
+    if not ok:
+        await update.message.reply_text(_t("app_launch_failed"))
+        return
+    appeared = await asyncio.to_thread(state.target.wait_for_window, 60.0)
+    await update.message.reply_text(_t("app_started") if appeared else _t("app_started_no_window"))
+
+
+@restricted
 async def cmd_window(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/window <claude|avd> <title keyword> - which window each target
     points at is a guess at a title substring; when it's wrong (a renamed

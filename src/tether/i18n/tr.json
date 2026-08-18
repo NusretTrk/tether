@@ -106,5 +106,18 @@
   "keypad_profile_title": "{name} tuş takımı:",
   "btn_screen_claude": "📸 Claude",
   "btn_screen_avd": "📱 AVD",
-  "staged_photo_caption_prompt": "Bu fotoğraf şununla gönderilecek:\n\n{text}"
+  "staged_photo_caption_prompt": "Bu fotoğraf şununla gönderilecek:\n\n{text}",
+  "app_down": "Claude Desktop çalışmayı durdurdu.",
+  "app_back_up": "Claude Desktop yeniden çalışıyor.",
+  "app_start": "Başlat",
+  "app_started": "Claude Desktop başlatıldı.",
+  "app_started_no_window": "Başlatıldı ama henüz pencere görünmedi.",
+  "app_already_running": "Claude Desktop zaten çalışıyor.",
+  "app_launch_failed": "Claude Desktop başlatılamadı.",
+  "app_restart_prompt": "Claude Desktop yeniden başlatılsın mı? {count} işlem kapatılacak.\n\nBu, çalışan tüm oturumları sonlandırır - bir ajan botu kullanıyorsa onu da.",
+  "app_restart_prompt_stopped": "Claude Desktop çalışmıyor. Başlatılsın mı?",
+  "app_restart_confirm_yes": "Yeniden başlat",
+  "app_restarting": "Claude kapatılıyor, dosya kilitlerinin bırakılması bekleniyor...",
+  "app_restarted": "Claude Desktop yeniden başlatıldı.",
+  "app_restart_failed": "Yeniden başlatma şurada başarısız: {reason}"
 }

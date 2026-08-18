@@ -106,5 +106,18 @@
   "keypad_profile_title": "Teclado {name}:",
   "btn_screen_claude": "📸 Claude",
   "btn_screen_avd": "📱 AVD",
-  "staged_photo_caption_prompt": "A punto de enviar esta foto con:\n\n{text}"
+  "staged_photo_caption_prompt": "A punto de enviar esta foto con:\n\n{text}",
+  "app_down": "Claude Desktop dejó de ejecutarse.",
+  "app_back_up": "Claude Desktop está funcionando de nuevo.",
+  "app_start": "Iniciar",
+  "app_started": "Claude Desktop iniciado.",
+  "app_started_no_window": "Iniciado, pero aún no apareció ninguna ventana.",
+  "app_already_running": "Claude Desktop ya está en ejecución.",
+  "app_launch_failed": "No se pudo iniciar Claude Desktop.",
+  "app_restart_prompt": "¿Reiniciar Claude Desktop? Se cerrarán {count} procesos.\n\nEsto termina cualquier sesión en curso, incluida esta si un agente está usando el bot.",
+  "app_restart_prompt_stopped": "Claude Desktop no está en ejecución. ¿Iniciarlo?",
+  "app_restart_confirm_yes": "Reiniciar",
+  "app_restarting": "Cerrando Claude y esperando la liberación de archivos...",
+  "app_restarted": "Claude Desktop reiniciado.",
+  "app_restart_failed": "El reinicio falló en: {reason}"
 }

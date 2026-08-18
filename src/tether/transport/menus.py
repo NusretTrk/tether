@@ -197,6 +197,24 @@ def profile_list_menu(_t, profile_names: list[str]) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(rows)
 
 
+def app_down_keyboard(_t) -> InlineKeyboardMarkup:
+    """Attached to the "Claude isn't running" alert so it can be started
+    from the notification itself."""
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(_t("app_start"), callback_data="app:start")],
+    ])
+
+
+def restart_confirm_keyboard(_t) -> InlineKeyboardMarkup:
+    """Restarting kills whatever session is live, including the one issuing
+    the command if an agent is driving it - always confirmed, never
+    automatic."""
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(_t("app_restart_confirm_yes"), callback_data="app:restart"),
+         InlineKeyboardButton(_t("staged_cancel"), callback_data="app:cancel")],
+    ])
+
+
 def staged_message_keyboard(_t) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([[
         InlineKeyboardButton(_t("staged_send"), callback_data="staged:send"),

@@ -106,5 +106,18 @@
   "keypad_profile_title": "{name} keypad:",
   "btn_screen_claude": "📸 Claude",
   "btn_screen_avd": "📱 AVD",
-  "staged_photo_caption_prompt": "About to send this photo with:\n\n{text}"
+  "staged_photo_caption_prompt": "About to send this photo with:\n\n{text}",
+  "app_down": "Claude Desktop stopped running.",
+  "app_back_up": "Claude Desktop is running again.",
+  "app_start": "Start it",
+  "app_started": "Claude Desktop started.",
+  "app_started_no_window": "Launched, but no window appeared yet.",
+  "app_already_running": "Claude Desktop is already running.",
+  "app_launch_failed": "Couldn't launch Claude Desktop.",
+  "app_restart_prompt": "Restart Claude Desktop? {count} processes will be closed.\n\nThis ends any session that's currently running, including this one if an agent is driving it.",
+  "app_restart_prompt_stopped": "Claude Desktop isn't running. Start it?",
+  "app_restart_confirm_yes": "Restart",
+  "app_restarting": "Closing Claude and waiting for file handles to release...",
+  "app_restarted": "Claude Desktop restarted.",
+  "app_restart_failed": "Restart failed at: {reason}"
 }

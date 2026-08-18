@@ -88,6 +88,19 @@ class Settings:
 
     dialog_watch_enabled: bool = True
     stall_watch_enabled: bool = True
+
+    # Substring of the executable path that identifies the Claude Desktop
+    # app, as opposed to the Claude Code CLI which shares its exe name.
+    # Getting this wrong means killing the wrong program.
+    claude_app_path_filter: str = "WindowsApps"
+    # Leave empty to discover the Store app's launch command at runtime.
+    claude_launch_command: str = ""
+
+    # Notify when Claude Desktop stops running entirely (crash, or the
+    # updater killing it). Restarting is never automatic - it ends any
+    # live session, so it stays a deliberate action.
+    app_health_watch_enabled: bool = True
+    app_health_check_interval_sec: int = 60
     # Substrings (case-insensitive) of session names to never notify
     # about finishing. Defaults to the session tether itself typically
     # runs inside of — without this, the bot notifies about its own

@@ -42,6 +42,11 @@ class AppState:
     pending_tool_calls: dict[str, tuple[float, str]] = field(default_factory=dict)
     stall_notified: set[str] = field(default_factory=set)
 
+    # None until the first health check runs, so startup doesn't report
+    # a transition that didn't happen.
+    app_was_running: bool | None = None
+    app_down_notified: bool = False
+
     temp_history: list[str] = field(default_factory=list)
     last_temp_alarm: float = 0.0
 
@@ -60,7 +65,11 @@ class AppState:
 
     @staticmethod
     def build(config: Config) -> "AppState":
-        target = ClaudeDesktopTarget(config.settings.claude_window_keyword)
+        target = ClaudeDesktopTarget(
+            config.settings.claude_window_keyword,
+            config.settings.claude_app_path_filter,
+            config.settings.claude_launch_command,
+        )
         return AppState(
             config=config,
             target=target,

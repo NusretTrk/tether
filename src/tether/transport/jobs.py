@@ -281,3 +281,40 @@ async def stall_job(context: ContextTypes.DEFAULT_TYPE) -> None:
             _t("prompt_detected", text=f"{tool_name} - no result after {int(waited)}s"),
             reply_markup=menus.prompt_reply_keyboard(_t),
         )
+
+
+async def app_health_job(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Reports when Claude Desktop stops running, and when it comes back.
+
+    Deliberately does not restart anything on its own. A restart ends
+    whatever session was live, so it stays a deliberate action behind
+    /restart with a confirmation - an automatic one could kill work in
+    progress to fix a problem the user might not even have noticed.
+    """
+    import asyncio
+
+    state = context.bot_data["state"]
+    settings = state.config.settings
+    if not settings.app_health_watch_enabled:
+        return
+    _t = make_translator(settings.language)
+
+    running = await asyncio.to_thread(state.target.is_app_running)
+
+    # First run only establishes a baseline; nothing has "changed" yet.
+    if state.app_was_running is None:
+        state.app_was_running = running
+        return
+
+    if state.app_was_running and not running and not state.app_down_notified:
+        state.app_down_notified = True
+        await context.bot.send_message(
+            state.config.secrets.chat_id,
+            _t("app_down"),
+            reply_markup=menus.app_down_keyboard(_t),
+        )
+    elif running and not state.app_was_running:
+        state.app_down_notified = False
+        await context.bot.send_message(state.config.secrets.chat_id, _t("app_back_up"))
+
+    state.app_was_running = running
