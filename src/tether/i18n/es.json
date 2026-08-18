@@ -103,5 +103,7 @@
   "staged_photo_prompt": "A punto de enviar esta foto — ¿confirmas?",
   "keypad_profile_pick": "Elige un teclado:",
   "keypad_profile_unknown": "No hay perfil llamado '{name}'. Configurados: {options}",
-  "keypad_profile_title": "Teclado {name}:"
+  "keypad_profile_title": "Teclado {name}:",
+  "btn_screen_claude": "📸 Claude",
+  "btn_screen_avd": "📱 AVD"
 }

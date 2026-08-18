@@ -17,7 +17,7 @@ from tether.i18n import make_translator
 from tether.mcp import shared_state
 from tether.transport import menus
 from tether.transport.handlers import (
-    cmd_keys, cmd_menu, cmd_screen, cmd_sessions, cmd_status, cmd_stop, restricted,
+    cmd_keys, cmd_menu, cmd_screen, cmd_sessions, cmd_status, cmd_stop, restricted, _send_screenshot,
 )
 
 # The original bot treated a plain "1", "y", "Enter" etc typed as a message
@@ -27,7 +27,28 @@ from tether.transport.handlers import (
 # user's side looked exactly like "the keypad stopped working": typing a
 # shortcut just put literal text in the chat instead of answering anything.
 # Restored here, case-insensitive, matching the same allowlist /keys uses.
-TEXT_KEY_SHORTCUTS = {"1", "2", "3", "4", "5", "y", "n", "enter", "escape", "esc", "tab"}
+#
+# Digits and a few English abbreviations always work regardless of language
+# (nobody expects "1" or "tab" to be translated). Yes/No/Enter/Escape are
+# localized on the physical keyboard though (key_yes is "j" in German, "s"
+# in Spanish) — matching only the English literal would silently break the
+# button in every language but English/Turkish, where they happen to
+# coincide with "y"/"n". _localized_key_shortcuts() builds the real mapping
+# per request from the active language's own catalogue.
+TEXT_KEY_SHORTCUTS = {"1", "2", "3", "4", "5", "enter", "escape", "esc", "tab"}
+
+
+def _localized_key_shortcuts(_t) -> dict[str, str]:
+    """{localized button label, lowercased: actual key to send}, built from
+    whatever language is active — so a German "j" or Spanish "s" button
+    resolves to "y" the same way the English "y" button already does."""
+    return {
+        _t("key_yes").lower(): "y",
+        _t("key_no").lower(): "n",
+        _t("key_enter").lower(): "enter",
+        _t("key_escape").lower(): "escape",
+        _t("key_tab").lower(): "tab",
+    }
 
 
 @restricted
@@ -51,6 +72,12 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text == _t("btn_screen"):
         await cmd_screen(update, context)
         return
+    if text == _t("btn_screen_claude"):
+        await _send_screenshot(update, context, state.config.settings.claude_window_keyword, "claude", update.message.reply_text)
+        return
+    if text == _t("btn_screen_avd"):
+        await _send_screenshot(update, context, state.config.settings.avd_window_keyword, "avd", update.message.reply_text)
+        return
     if text == _t("btn_stop"):
         await cmd_stop(update, context)
         return
@@ -65,10 +92,17 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     # 2b. Bare keypress shortcuts ("1", "y", "Enter") — answer a prompt,
-    # don't type the literal character into Claude's chat.
+    # don't type the literal character into Claude's chat. Checks both the
+    # language-agnostic set (digits, English abbreviations) and whatever
+    # the current language's own Yes/No/Enter/Escape/Tab buttons say.
     low = text.lower().strip()
-    key = "escape" if low == "esc" else low
+    localized = _localized_key_shortcuts(_t)
+    key = None
     if low in TEXT_KEY_SHORTCUTS:
+        key = "escape" if low == "esc" else low
+    elif low in localized:
+        key = localized[low]
+    if key is not None:
         ok = await asyncio.to_thread(state.target.send_key, key)
         await update.message.reply_text(_t("key_sent", key_name=text) if ok else _t("key_failed"))
         return

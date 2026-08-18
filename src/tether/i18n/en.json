@@ -103,5 +103,7 @@
   "staged_photo_prompt": "About to send this photo — confirm?",
   "keypad_profile_pick": "Choose a keypad:",
   "keypad_profile_unknown": "No profile named '{name}'. Configured: {options}",
-  "keypad_profile_title": "{name} keypad:"
+  "keypad_profile_title": "{name} keypad:",
+  "btn_screen_claude": "📸 Claude",
+  "btn_screen_avd": "📱 AVD"
 }

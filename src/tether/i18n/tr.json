@@ -103,5 +103,7 @@
   "staged_photo_prompt": "Bu fotoğraf gönderilecek — onaylıyor musun?",
   "keypad_profile_pick": "Bir tuş takımı seç:",
   "keypad_profile_unknown": "'{name}' adında profil yok. Tanımlı: {options}",
-  "keypad_profile_title": "{name} tuş takımı:"
+  "keypad_profile_title": "{name} tuş takımı:",
+  "btn_screen_claude": "📸 Claude",
+  "btn_screen_avd": "📱 AVD"
 }

@@ -14,11 +14,17 @@ LANGUAGE_LABELS = {"en": "English", "tr": "Türkçe", "de": "Deutsch", "es": "Es
 
 
 def main_reply_keyboard(_t) -> ReplyKeyboardMarkup:
+    """The physical keyboard row, always visible without opening any menu.
+    Mirrors the original bot's layout (direct screenshot buttons, keypad
+    shortcuts as physical buttons) rather than requiring /keys or /screen
+    every time — those commands still work too, this is just the fast path."""
     return ReplyKeyboardMarkup(
         [
-            [_t("btn_status"), _t("btn_screen")],
-            [_t("btn_stop"), _t("btn_sessions")],
-            [_t("btn_keypad"), _t("btn_menu")],
+            [_t("btn_screen_claude"), _t("btn_screen_avd")],
+            ["1", "2", "3"],
+            [_t("key_yes"), _t("key_no"), _t("key_enter")],
+            [_t("btn_status"), _t("btn_sessions")],
+            [_t("btn_stop"), _t("btn_menu")],
         ],
         resize_keyboard=True,
         is_persistent=True,
