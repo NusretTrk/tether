@@ -34,6 +34,7 @@ from tether.monitors.lockout import LockoutDecider, LockoutPolicy
 log = logging.getLogger(__name__)
 
 MAX_BODY_BYTES = 8192
+MAX_CONCURRENT_CONNECTIONS = 20
 ALLOWED_SETTINGS_KEYS = {"language", "output_mode", "confirm_before_send", "mini_app_enabled"}
 ALLOWED_LANGUAGES = {"en", "tr", "de", "es"}
 ALLOWED_OUTPUT_MODES = {"live", "summary", "quiet", "verbose"}
@@ -51,6 +52,33 @@ class MiniAppServer(ThreadingHTTPServer):
         self.lockout = LockoutDecider(LockoutPolicy(max_attempts=8, window_sec=300))
         self.lockout_lock = threading.Lock()
         self._lockout_alerted = False
+        self._active_connections = 0
+        self._connections_lock = threading.Lock()
+
+    def process_request(self, request, client_address):
+        """Caps concurrent connections before a thread is even spawned -
+        ThreadingHTTPServer has no built-in limit, so an internet-facing
+        instance (this one, via ngrok) would otherwise spawn one OS thread
+        per incoming connection with no ceiling, a real resource-exhaustion
+        angle for something reachable from outside the owner's own network."""
+        with self._connections_lock:
+            if self._active_connections >= MAX_CONCURRENT_CONNECTIONS:
+                self.shutdown_request(request)
+                return
+            self._active_connections += 1
+        try:
+            super().process_request(request, client_address)
+        except Exception:
+            with self._connections_lock:
+                self._active_connections -= 1
+            raise
+
+    def process_request_thread(self, request, client_address):
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            with self._connections_lock:
+                self._active_connections -= 1
 
     def _bridge_send_message(self, text: str) -> None:
         """Fires a Telegram message from this server's own worker thread by

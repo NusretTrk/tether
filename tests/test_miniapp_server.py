@@ -278,3 +278,33 @@ def test_favicon_returns_no_content_without_auth(running_server):
     req = urllib.request.Request(base + "/favicon.ico")
     with urllib.request.urlopen(req, timeout=5) as resp:
         assert resp.status == 204
+
+
+def test_connection_over_cap_is_dropped_without_spawning_a_thread(running_server, monkeypatch):
+    """ThreadingHTTPServer has no built-in concurrency limit - an
+    internet-facing instance (this one, via ngrok) needs one, or a flood
+    of connections spawns an unbounded number of OS threads. Exercised
+    directly against process_request rather than opening real sockets,
+    since simulating hundreds of held-open connections isn't practical
+    in a unit test."""
+    from tether.miniapp import server as server_mod
+
+    server, base, state = running_server
+    monkeypatch.setattr(server_mod, "MAX_CONCURRENT_CONNECTIONS", 1)
+
+    shutdown_calls = []
+    monkeypatch.setattr(server, "shutdown_request", lambda req: shutdown_calls.append(req))
+
+    spawned = []
+    monkeypatch.setattr(
+        server_mod.ThreadingHTTPServer, "process_request",
+        lambda self, request, addr: spawned.append(request),
+    )
+
+    server.process_request("req-1", ("127.0.0.1", 1))  # fills the one slot
+    assert spawned == ["req-1"]
+    assert server._active_connections == 1
+
+    server.process_request("req-2", ("127.0.0.1", 2))  # over cap - dropped
+    assert shutdown_calls == ["req-2"]
+    assert "req-2" not in spawned
