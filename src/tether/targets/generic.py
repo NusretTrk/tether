@@ -10,12 +10,17 @@ falls back to "trust whatever already has focus" if no click point is
 configured.
 
 That fallback is a real, disclosed limitation, confirmed live rather than
-assumed: tested against a real open Antigravity window, focusing the
-window alone does NOT put keyboard focus in its Agent chat panel - a
-blind paste landed nowhere. Clicking the panel first (input_click) fixed
-it completely. A terminal or a single-pane editor is more likely to
-auto-focus its one input on activation, which is why this stays optional
-rather than required - but for a multi-panel app, expect to need it.
+assumed against both Antigravity and Cursor. Antigravity needed
+input_click from the first try - focusing the window alone never put
+keyboard focus in its Agent chat panel. Cursor was worse in a subtler
+way: a fresh window happened to already have its chat focused and a
+blind paste worked, but that was leftover state, not a guarantee - after
+clicking into Cursor's own terminal for an unrelated check, the exact
+same blind-paste code sent the next message straight into the terminal
+instead, where it ran as a shell command. So "let the fallback ride" is
+only really safe for something that's the sole input in its window (a
+dedicated terminal app); anything with more than one panel should get an
+input_click configured, not just multi-panel apps where it "seems" needed.
 """
 from __future__ import annotations
 

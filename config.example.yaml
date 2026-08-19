@@ -43,19 +43,31 @@ activity_watch_enabled: true    # notify when a Running session goes Idle
 # then just type normally to send it into Cursor's chat instead. /target
 # claude switches back. This is lower-fidelity than Claude Desktop's own
 # handling (no verified delivery, no OCR-located input box - it just
-# focuses the window and pastes), so it works best for a terminal or a
-# single input area. For a multi-panel app, add input_click: {x, y} - a
-# window-relative percentage (0-1) of where to click before pasting, so
-# the paste lands in the right panel instead of wherever last had focus.
-# Confirmed necessary live against a real Antigravity window: focusing the
-# window alone did not focus its Agent chat panel, clicking it first did.
-# Not needed for a terminal, which usually auto-focuses its one input.
+# focuses the window and pastes), so add input_click: {x, y} - a
+# window-relative percentage (0-1) of where to click before pasting.
+#
+# input_click is effectively always worth setting, not just for a "hard"
+# multi-panel app. Confirmed live against both Cursor and Antigravity:
+# a fresh Cursor window happened to already have its Agent chat focused
+# and worked without a click - but that turned out to be leftover state
+# from whatever was focused before, not something Cursor guarantees. The
+# next test (after clicking into Cursor's terminal for an unrelated
+# check) sent the exact same message straight into the terminal instead,
+# where it ran as a failed shell command. Antigravity needed the click
+# from the very first try - its Agent panel never had default focus.
+# Only skip input_click for something that's ALWAYS the sole input in its
+# window, like a dedicated terminal app with nothing else in it.
 #
 # Uncomment and adjust to match your setup:
 #
 # keypad_profiles:
 #   cursor:
 #     window_keyword: "Cursor"
+#     # Verified live: the Agent chat panel sits at roughly this position
+#     # in a normally-docked, normally-sized Cursor window.
+#     input_click:
+#       x: 0.88
+#       y: 0.10
 #     keys:
 #       Accept: tab
 #       Reject: escape

@@ -55,8 +55,14 @@ is actually running on that OS — on Windows they sit on disk, unread.
   Antigravity, a terminal, or anything with a window, not just Claude
   Desktop. Reuses the same named profiles `/keys` already uses. Lower
   fidelity than the Claude Desktop path on purpose (see below), but
-  confirmed working against a real, currently-open Antigravity window
-  while building it, not just assumed.
+  confirmed actually working — sent real messages into both a live
+  Antigravity and a live Cursor window and got real replies back while
+  building it, not just assumed. That testing also caught a real bug:
+  Cursor doesn't reliably keep its chat panel focused — after clicking
+  its terminal for an unrelated check, the next message sent that way
+  landed in the terminal and ran as a command instead. Fixed by clicking
+  the right panel before every paste (`input_click` in a profile), which
+  the example config now sets for both.
 - **Fetch a file with `/files` and `/file`** — the agent writes a `.md`
   file mid-session and you're not at the machine to read it. `/files`
   lists recent ones as tap-to-fetch buttons; `/file <path>` grabs one
