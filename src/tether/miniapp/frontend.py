@@ -123,7 +123,16 @@ INDEX_HTML = r"""<!doctype html>
   /* ---------- app shell ---------- */
   #app {
     display: none; flex-direction: column;
-    height: 100vh; height: 100dvh;
+    /* 100dvh is the fallback for a plain browser tab; inside Telegram's
+       iOS WebView, dvh does NOT shrink when the on-screen keyboard opens
+       (a known WebView quirk, not a bug in this CSS), which is what let
+       the composer/tabbar sit underneath the keyboard instead of above
+       it. --tg-vh is set from Telegram.WebApp.viewportHeight in JS,
+       updated live on the SDK's own viewportChanged event - the actual
+       visible height, keyboard included, which is the one signal that's
+       reliably accurate here. */
+    height: 100dvh;
+    height: var(--tg-vh, 100dvh);
   }
   .appbar {
     flex: none; padding: calc(10px + env(safe-area-inset-top)) 20px 8px;
@@ -554,6 +563,9 @@ INDEX_HTML = r"""<!doctype html>
   try { tg.disableVerticalSwipes && tg.disableVerticalSwipes(); } catch (e) {}
   applyTheme();
   tg.onEvent("themeChanged", applyTheme);
+  applyViewportHeight();
+  tg.onEvent("viewportChanged", applyViewportHeight);
+  window.addEventListener("resize", applyViewportHeight);
 
   // Telegram's colorScheme is used only as a light/dark *signal* - the
   // palette itself is ours, so the app looks like itself regardless of
@@ -565,6 +577,19 @@ INDEX_HTML = r"""<!doctype html>
     try { tg.setHeaderColor(bg); } catch (e) {}
     try { tg.setBackgroundColor(bg); } catch (e) {}
     try { tg.setBottomBarColor && tg.setBottomBarColor(bg); } catch (e) {}
+  }
+
+  // Telegram's iOS WebView does not shrink CSS dvh when the on-screen
+  // keyboard opens - #app kept its full pre-keyboard height, so the
+  // composer and tab bar ended up sitting UNDER the keyboard instead of
+  // pinned above it. viewportHeight (or viewportStableHeight once
+  // Telegram's own resize settles) is the one signal that actually
+  // reflects the current visible area, keyboard included - pushed into
+  // a CSS variable #app's height is calc()'d from, on load and every
+  // time the SDK reports a change.
+  function applyViewportHeight() {
+    const h = tg.viewportStableHeight || tg.viewportHeight || window.innerHeight;
+    document.documentElement.style.setProperty("--tg-vh", h + "px");
   }
 
   function haptic(kind) {
