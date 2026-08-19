@@ -162,7 +162,7 @@ def test_message_goes_to_the_selected_target_not_claude(monkeypatch):
             return True
 
     generic = FakeGenericTarget("Cursor", True)
-    monkeypatch.setattr("tether.targets.generic.GenericTarget", lambda kw, preserve: generic)
+    monkeypatch.setattr("tether.targets.generic.GenericTarget", lambda kw, preserve, click=None: generic)
     monkeypatch.setattr(FakeSettings, "keypad_profiles", {"cursor": {"window_keyword": "Cursor"}}, raising=False)
     monkeypatch.setattr(FakeSettings, "preserve_user_clipboard", True, raising=False)
 

@@ -23,4 +23,6 @@ def active_target(state):
     if not profile or not profile.get("window_keyword"):
         return state.target
     from tether.targets.generic import GenericTarget
-    return GenericTarget(profile["window_keyword"], state.config.settings.preserve_user_clipboard)
+    input_click = profile.get("input_click")
+    click = (input_click["x"], input_click["y"]) if input_click else None
+    return GenericTarget(profile["window_keyword"], state.config.settings.preserve_user_clipboard, click)

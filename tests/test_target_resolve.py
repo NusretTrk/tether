@@ -15,6 +15,7 @@ class FakeSettings:
     keypad_profiles = {
         "cursor": {"window_keyword": "Cursor", "keys": {}},
         "broken": {"keys": {}},  # no window_keyword
+        "antigravity": {"window_keyword": "Antigravity", "input_click": {"x": 0.92, "y": 0.42}},
     }
     preserve_user_clipboard = True
 
@@ -60,3 +61,14 @@ def test_generic_target_inherits_clipboard_preservation_setting(monkeypatch):
     state = FakeState(active_target_profile="cursor")
     result = active_target(state)
     assert result.preserve_user_clipboard is False
+
+
+def test_profile_without_input_click_leaves_it_unset():
+    state = FakeState(active_target_profile="cursor")
+    assert active_target(state).input_click is None
+
+
+def test_profile_with_input_click_passes_it_through():
+    state = FakeState(active_target_profile="antigravity")
+    result = active_target(state)
+    assert result.input_click == (0.92, 0.42)

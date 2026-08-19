@@ -43,9 +43,13 @@ activity_watch_enabled: true    # notify when a Running session goes Idle
 # then just type normally to send it into Cursor's chat instead. /target
 # claude switches back. This is lower-fidelity than Claude Desktop's own
 # handling (no verified delivery, no OCR-located input box - it just
-# focuses the window and pastes, trusting whatever has focus is the right
-# place), so it works best for a terminal or a single input area, not a
-# multi-panel app where the wrong panel might be focused.
+# focuses the window and pastes), so it works best for a terminal or a
+# single input area. For a multi-panel app, add input_click: {x, y} - a
+# window-relative percentage (0-1) of where to click before pasting, so
+# the paste lands in the right panel instead of wherever last had focus.
+# Confirmed necessary live against a real Antigravity window: focusing the
+# window alone did not focus its Agent chat panel, clicking it first did.
+# Not needed for a terminal, which usually auto-focuses its one input.
 #
 # Uncomment and adjust to match your setup:
 #
@@ -68,6 +72,12 @@ activity_watch_enabled: true    # notify when a Running session goes Idle
 #       Down: down
 #   antigravity:
 #     window_keyword: "Antigravity"
+#     # Verified live: the Agent chat panel sits at roughly this position
+#     # in a normally-docked, normally-sized Antigravity window. Adjust if
+#     # yours is laid out differently (panel moved, window resized oddly).
+#     input_click:
+#       x: 0.92
+#       y: 0.42
 #     keys:
 #       Accept: tab
 #       Reject: escape

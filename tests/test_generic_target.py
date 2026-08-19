@@ -86,3 +86,47 @@ def test_stage_photo_pastes_caption_after_image(monkeypatch):
     result = t.stage_photo(b"fake-image-bytes", caption="see this")
     assert result.ok
     assert copied == ["see this"]
+
+
+# --- input_click ---------------------------------------------------------
+# Added after live-testing against a real open Antigravity window: focusing
+# the window alone did NOT put keyboard focus in its Agent chat panel (a
+# blind paste landed nowhere), but clicking the panel first fixed it
+# completely. input_click is that click point, as a window-relative
+# percentage so it survives the window being moved/resized.
+
+def test_no_input_click_configured_never_clicks(monkeypatch):
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
+    monkeypatch.setattr(generic_mod, "focus_window", lambda hwnd: True)
+    monkeypatch.setattr(generic_mod.pyperclip, "copy", lambda text: None)
+    monkeypatch.setattr(generic_mod.pyautogui, "hotkey", lambda *a: None)
+    clicks = []
+    monkeypatch.setattr(generic_mod.pyautogui, "click", lambda x, y: clicks.append((x, y)))
+    t = GenericTarget("Cursor")  # no input_click
+    t.stage_text("hello")
+    assert clicks == []
+
+
+def test_input_click_converts_percentage_to_window_relative_coordinates(monkeypatch):
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
+    monkeypatch.setattr(generic_mod, "focus_window", lambda hwnd: True)
+    monkeypatch.setattr(generic_mod, "get_window_rect", lambda hwnd: (100, 200, 1100, 1200))  # 1000x1000
+    monkeypatch.setattr(generic_mod.pyperclip, "copy", lambda text: None)
+    monkeypatch.setattr(generic_mod.pyautogui, "hotkey", lambda *a: None)
+    clicks = []
+    monkeypatch.setattr(generic_mod.pyautogui, "click", lambda x, y: clicks.append((x, y)))
+    t = GenericTarget("Cursor", input_click=(0.9, 0.4))
+    t.stage_text("hello")
+    assert clicks == [(100 + 900, 200 + 400)]
+
+
+def test_input_click_also_applies_to_press_enter(monkeypatch):
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
+    monkeypatch.setattr(generic_mod, "focus_window", lambda hwnd: True)
+    monkeypatch.setattr(generic_mod, "get_window_rect", lambda hwnd: (0, 0, 1000, 1000))
+    monkeypatch.setattr(generic_mod.pyautogui, "press", lambda key: None)
+    clicks = []
+    monkeypatch.setattr(generic_mod.pyautogui, "click", lambda x, y: clicks.append((x, y)))
+    t = GenericTarget("Cursor", input_click=(0.5, 0.5))
+    t.press_enter()
+    assert clicks == [(500, 500)]
