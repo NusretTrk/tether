@@ -83,6 +83,7 @@ class FakeSettings:
 class FakeSecrets:
     bot_token: str = BOT_TOKEN
     chat_id: int = CHAT_ID
+    bot_password: str | None = None
 
 
 @dataclass
@@ -100,6 +101,7 @@ class FakeState:
     target_tailer_path = None
     miniapp_server: object = None
     ngrok_runner: object = None
+    unlocked: bool = True  # default matches the common case (no BOT_PASSWORD set)
 
 
 @pytest.fixture
@@ -261,6 +263,59 @@ def test_wrong_chat_id_signature_is_rejected(running_server):
     status, body = _request(base + "/api/status", headers={"Authorization": "tma " + valid_init_data(user_id=999)})
     assert status == 401
     assert body["error"] == "wrong_chat"
+
+
+def test_valid_signature_is_rejected_while_bot_password_is_locked(running_server):
+    """This is the real point of BOT_PASSWORD: it protects against the
+    owner's own Telegram account being compromised, a scenario where the
+    attacker's initData is genuinely, validly signed (they ARE the
+    authorized chat_id as far as Telegram's concerned). A validly-signed
+    request must not bypass this second factor."""
+    server, base, state = running_server
+    state.config.secrets.bot_password = "hunter2"
+    state.unlocked = False
+
+    status, body = _request(base + "/api/status", headers={"Authorization": "tma " + valid_init_data()})
+    assert status == 423
+    assert body["error"] == "locked"
+
+
+def test_valid_signature_works_once_unlocked(running_server):
+    server, base, state = running_server
+    state.config.secrets.bot_password = "hunter2"
+    state.unlocked = True
+
+    status, body = _request(base + "/api/status", headers={"Authorization": "tma " + valid_init_data()})
+    assert status == 200
+
+
+def test_locked_rejection_does_not_count_toward_lockout(running_server):
+    """Being locked isn't a forged/bad signature - a real owner who just
+    hasn't unlocked yet shouldn't get treated like an attacker and
+    eventually rate-limited out of their own bot."""
+    server, base, state = running_server
+    state.config.secrets.bot_password = "hunter2"
+    state.unlocked = False
+
+    for _ in range(15):
+        status, _ = _request(base + "/api/status", headers={"Authorization": "tma " + valid_init_data()})
+        assert status == 423
+
+    state.unlocked = True
+    status, body = _request(base + "/api/status", headers={"Authorization": "tma " + valid_init_data()})
+    assert status == 200  # not 429 - never got treated as auth failures
+
+
+def test_no_bot_password_set_ignores_unlocked_flag(running_server):
+    """The common case (BOT_PASSWORD never set) must behave exactly as
+    before this check existed - state.unlocked is irrelevant when there's
+    no password to unlock in the first place."""
+    server, base, state = running_server
+    state.config.secrets.bot_password = None
+    state.unlocked = False
+
+    status, body = _request(base + "/api/status", headers={"Authorization": "tma " + valid_init_data()})
+    assert status == 200
 
 
 def test_repeated_bad_auth_trips_lockout_and_fires_one_alert(running_server, monkeypatch):

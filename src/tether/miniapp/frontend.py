@@ -180,6 +180,7 @@ INDEX_HTML = r"""<!doctype html>
 
   function friendlyError(e) {
     if (e.message === "too_many_failed_attempts") return "Temporarily locked out after repeated failed attempts. Try again in a few minutes.";
+    if (e.message === "locked") return "Bot is locked. Send /unlock <password> in the chat first, then reopen this.";
     if (e.message && e.message.startsWith("http")) return "tether isn't reachable right now - try again in a moment, or send /start in the chat.";
     return "Couldn't load this - try again in a moment, or send /start in the chat.";
   }

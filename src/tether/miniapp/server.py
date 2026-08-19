@@ -196,6 +196,23 @@ class _Handler(BaseHTTPRequestHandler):
                 )
             self._send_json(401, {"error": result.reason})
             return None
+
+        # A validly-signed initData only proves "this really is a Telegram
+        # session for the authorized chat_id" - exactly the same thing the
+        # chat_id check on every other handler proves, and exactly the
+        # thing BOT_PASSWORD exists to add a second factor on top of (see
+        # transport/handlers.py::restricted's own docstring: the password
+        # protects against the owner's own Telegram account being
+        # compromised, a scenario where the attacker genuinely IS the
+        # authorized chat_id as far as Telegram - and initData - are
+        # concerned). Skipping this check would make BOT_PASSWORD
+        # meaningless for this entire surface. Not counted as an auth
+        # failure/lockout trigger - the signature is genuine, the account
+        # just isn't unlocked, a different thing from a forged request.
+        if state.config.secrets.bot_password and not state.unlocked:
+            self._send_json(423, {"error": "locked"})
+            return None
+
         return result.user_id
 
     # ---- routing ----
