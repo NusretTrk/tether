@@ -153,13 +153,46 @@ class GenericTarget:
         hwnd = self._hwnd()
         return capture_window(hwnd) if hwnd else None
 
+    def _lines_near_model_button(self, hwnd, img):
+        """OCR lines restricted to a region around model_click, not the
+        whole window. capture_window grabs the entire window regardless of
+        where the dropdown actually rendered, so an unscoped search could
+        match unrelated text sitting anywhere else in the window (a file
+        name, a menu label, anything visible) and click that instead - a
+        real risk once name-matching is a substring search rather than an
+        exact one against a known list (see set_model's docstring for why
+        it can't be exact here). Bounded as window-relative fractions, not
+        fixed pixels, so it scales with the window instead of silently
+        being too tight or too loose at a different size. Dropdowns open
+        upward from their button far more often than downward, so the
+        region extends generously above the click and only slightly below."""
+        from tether.platform.ocr import ocr_lines
+        left, top, right, bottom = get_window_rect(hwnd)
+        width, height = right - left, bottom - top
+        click_x = width * self.model_click[0]
+        click_y = height * self.model_click[1]
+        max_x_dist = width * 0.28
+        max_above = height * 0.55
+        max_below = height * 0.06
+        result = []
+        for text, l, t, r, b in ocr_lines(img):
+            if not text.strip():
+                continue
+            cx, cy = (l + r) / 2, (t + b) / 2
+            if abs(cx - click_x) > max_x_dist:
+                continue
+            if not (click_y - max_above <= cy <= click_y + max_below):
+                continue
+            result.append((text, l, t, r, b))
+        return result
+
     def list_models(self) -> list[str]:
         """Opens the model picker (model_click required) and OCRs whatever
-        text lines appear, closing the dropdown again with Escape before
-        returning. Unlike ClaudeDesktopTarget there's no fixed known model
-        list to validate against here - the dropdown itself is the source
-        of truth, since every app names its models differently and that
-        list can change without tether knowing."""
+        text lines appear near it, closing the dropdown again with Escape
+        before returning. Unlike ClaudeDesktopTarget there's no fixed
+        known model list to validate against here - the dropdown itself
+        is the source of truth, since every app names its models
+        differently and that list can change without tether knowing."""
         hwnd = self._hwnd()
         if not hwnd or self.model_click is None:
             return []
@@ -167,18 +200,18 @@ class GenericTarget:
             return []
         self._click_at(hwnd, self.model_click)
         time.sleep(0.2)
-        from tether.platform.ocr import ocr_lines
         img = capture_window(hwnd)
-        lines = [text for text, *_ in ocr_lines(img) if text.strip()]
+        lines = [text for text, *_ in self._lines_near_model_button(hwnd, img)]
         pyautogui.press("escape")
         return lines
 
     def set_model(self, name: str) -> str | None:
-        """Opens the model picker, OCR-searches the visible lines for one
-        containing `name` (case-insensitive), and clicks its center.
-        Returns the matched line's exact text, or None if nothing matched
-        - the dropdown is closed via Escape either way, so a failed
-        attempt never leaves it hanging open."""
+        """Opens the model picker, OCR-searches the lines near the model
+        button (see _lines_near_model_button - NOT the whole window, on
+        purpose) for one containing `name` (case-insensitive), and clicks
+        its center. Returns the matched line's exact text, or None if
+        nothing matched - the dropdown is closed via Escape either way,
+        so a failed attempt never leaves it hanging open."""
         hwnd = self._hwnd()
         if not hwnd or self.model_click is None:
             return None
@@ -186,10 +219,9 @@ class GenericTarget:
             return None
         self._click_at(hwnd, self.model_click)
         time.sleep(0.2)
-        from tether.platform.ocr import ocr_lines
         img = capture_window(hwnd)
         match = None
-        for text, left, top, right, bottom in ocr_lines(img):
+        for text, left, top, right, bottom in self._lines_near_model_button(hwnd, img):
             if name.lower() in text.lower():
                 match = (text, left, top, right, bottom)
                 break

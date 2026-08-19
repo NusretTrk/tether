@@ -156,14 +156,38 @@ def test_list_models_opens_dropdown_ocrs_and_closes_it(monkeypatch):
     monkeypatch.setattr(generic_mod.pyautogui, "click", lambda x, y: clicks.append((x, y)))
     presses = []
     monkeypatch.setattr(generic_mod.pyautogui, "press", lambda key: presses.append(key))
+    # Boxes placed close to the click point (900, 400) - see
+    # _lines_near_model_button: OCR lines far from model_click are
+    # deliberately filtered out, so a realistic test needs realistic
+    # coordinates, not arbitrary ones in the corner of the window.
     monkeypatch.setattr(ocr_mod, "ocr_lines", lambda img: [
-        ("Gemini 3.5 Flash", 10, 10, 100, 30), ("Gemini 3.1 Pro", 10, 40, 100, 60),
+        ("Gemini 3.5 Flash", 860, 350, 950, 370), ("Gemini 3.1 Pro", 860, 380, 950, 400),
     ])
     t = GenericTarget("Antigravity", model_click=(0.9, 0.4))
     result = t.list_models()
     assert result == ["Gemini 3.5 Flash", "Gemini 3.1 Pro"]
     assert clicks == [(900, 400)]  # opened the picker
     assert presses == ["escape"]   # closed it again
+
+
+def test_list_models_ignores_text_far_from_the_model_button(monkeypatch):
+    """The real bug this guards against: capture_window grabs the WHOLE
+    window, so unscoped OCR would also pick up a file name, a menu label,
+    anything else visible - and a substring search could then match and
+    click something completely unrelated to the model picker."""
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
+    monkeypatch.setattr(generic_mod, "focus_window", lambda hwnd: True)
+    monkeypatch.setattr(generic_mod, "get_window_rect", lambda hwnd: (0, 0, 1000, 1000))
+    monkeypatch.setattr(generic_mod, "capture_window", lambda hwnd: None)
+    monkeypatch.setattr(generic_mod.pyautogui, "click", lambda x, y: None)
+    monkeypatch.setattr(generic_mod.pyautogui, "press", lambda key: None)
+    monkeypatch.setattr(ocr_mod, "ocr_lines", lambda img: [
+        ("Gemini 3.5 Flash", 860, 350, 950, 370),   # near the button - kept
+        ("Explorer", 10, 10, 60, 30),                # top-left corner - filtered out
+        ("package.json", 10, 500, 100, 520),         # far left - filtered out
+    ])
+    t = GenericTarget("Antigravity", model_click=(0.9, 0.4))
+    assert t.list_models() == ["Gemini 3.5 Flash"]
 
 
 def test_set_model_clicks_the_matching_line(monkeypatch):
@@ -174,13 +198,13 @@ def test_set_model_clicks_the_matching_line(monkeypatch):
     clicks = []
     monkeypatch.setattr(generic_mod.pyautogui, "click", lambda x, y: clicks.append((x, y)))
     monkeypatch.setattr(ocr_mod, "ocr_lines", lambda img: [
-        ("Gemini 3.5 Flash Medium Fast", 10, 10, 110, 30),
-        ("Gemini 3.1 Pro Low", 10, 40, 90, 60),
+        ("Gemini 3.5 Flash Medium Fast", 850, 350, 950, 370),
+        ("Gemini 3.1 Pro Low", 850, 380, 930, 400),
     ])
     t = GenericTarget("Antigravity", model_click=(0.9, 0.4))
     result = t.set_model("3.1 Pro")
     assert result == "Gemini 3.1 Pro Low"
-    assert clicks == [(900, 400), ((10 + 90) // 2, (40 + 60) // 2)]
+    assert clicks == [(900, 400), ((850 + 930) // 2, (380 + 400) // 2)]
 
 
 def test_set_model_is_case_insensitive_substring_match(monkeypatch):
@@ -189,7 +213,7 @@ def test_set_model_is_case_insensitive_substring_match(monkeypatch):
     monkeypatch.setattr(generic_mod, "get_window_rect", lambda hwnd: (0, 0, 1000, 1000))
     monkeypatch.setattr(generic_mod, "capture_window", lambda hwnd: None)
     monkeypatch.setattr(generic_mod.pyautogui, "click", lambda x, y: None)
-    monkeypatch.setattr(ocr_mod, "ocr_lines", lambda img: [("Claude Opus 4.6", 0, 0, 50, 20)])
+    monkeypatch.setattr(ocr_mod, "ocr_lines", lambda img: [("Claude Opus 4.6", 850, 360, 950, 380)])
     t = GenericTarget("Antigravity", model_click=(0.9, 0.4))
     assert t.set_model("opus") == "Claude Opus 4.6"
 
