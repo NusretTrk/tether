@@ -1,10 +1,23 @@
 python-telegram-bot==22.8
 python-dotenv>=1.2.2
 PyYAML==6.0.2
-pywin32>=311
 Pillow>=12.3.0
 pytesseract==0.3.13
 pyautogui==0.9.54
 pyperclip==1.9.0
-uiautomation==2.0.29
 mcp==2.0.0
+
+# Windows-only: window/UIA control, clipboard, process enumeration.
+pywin32>=311 ; sys_platform == "win32"
+uiautomation==2.0.29 ; sys_platform == "win32"
+
+# macOS-only: pyautogui needs these to do anything (mouse/keyboard/screen)
+# on macOS at all - without them `import pyautogui` itself fails.
+pyobjc-core ; sys_platform == "darwin"
+pyobjc-framework-Quartz ; sys_platform == "darwin"
+
+# Linux-only: same story for pyautogui's X11 backend. Also needs the
+# `scrot` system package (not pip-installable) for pyautogui's screenshot(),
+# and xdotool + xclip (see platform/window_linux.py) - install via your
+# distro's package manager, e.g. `apt install xdotool xclip scrot`.
+python3-xlib ; sys_platform == "linux"

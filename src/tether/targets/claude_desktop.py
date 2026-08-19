@@ -35,12 +35,10 @@ else:
         """Placeholder so except COMError is always valid, even where
         accessibility support (and the real COMError type) doesn't exist."""
 
-if CAPABILITIES.window_control:
-    import win32gui
 from tether.platform.ocr import find_input_box_anchor, ocr_find_word, ocr_text
 from tether.platform.window import (
-    capture_window, find_window_by_keyword, focus_window, preserve_clipboard,
-    set_clipboard_image,
+    capture_window, find_window_by_keyword, focus_window, get_window_rect,
+    preserve_clipboard, set_clipboard_image,
 )
 from tether.targets.base import Dialog, PasteResult, Session, TargetStatus
 
@@ -172,7 +170,7 @@ class ClaudeDesktopTarget:
             return PasteResult(False, "focus_failed")
         time.sleep(0.2)
 
-        win_left, win_top, win_right, win_bottom = win32gui.GetWindowRect(hwnd)
+        win_left, win_top, win_right, win_bottom = get_window_rect(hwnd)
         win_width = win_right - win_left
         anchor = find_input_box_anchor(capture_window(hwnd))
         if anchor:
@@ -231,7 +229,7 @@ class ClaudeDesktopTarget:
             return PasteResult(False, "focus_failed")
         time.sleep(0.2)
 
-        win_left, win_top, win_right, win_bottom = win32gui.GetWindowRect(hwnd)
+        win_left, win_top, win_right, win_bottom = get_window_rect(hwnd)
         win_width = win_right - win_left
         anchor = find_input_box_anchor(capture_window(hwnd))
         if anchor:
@@ -372,7 +370,7 @@ class ClaudeDesktopTarget:
         hwnd = self._hwnd()
         if not hwnd:
             return False
-        left, top, _, _ = win32gui.GetWindowRect(hwnd)
+        left, top, _, _ = get_window_rect(hwnd)
         pos = ocr_find_word(capture_window(hwnd), "Stop")
         if not focus_window(hwnd):
             return False
@@ -505,7 +503,7 @@ class ClaudeDesktopTarget:
         model_btn, _ = buttons
         if not focus_window(hwnd):
             return None
-        left, top, _, _ = win32gui.GetWindowRect(hwnd)
+        left, top, _, _ = get_window_rect(hwnd)
         pyautogui.click(left + model_btn[0], top + model_btn[1])
         time.sleep(0.4)
 
@@ -543,7 +541,7 @@ class ClaudeDesktopTarget:
         _, effort_btn = buttons
         if not focus_window(hwnd):
             return None
-        left, top, _, _ = win32gui.GetWindowRect(hwnd)
+        left, top, _, _ = get_window_rect(hwnd)
         pyautogui.click(left + effort_btn[0], top + effort_btn[1])
         time.sleep(0.4)
         pyautogui.press("tab")

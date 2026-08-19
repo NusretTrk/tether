@@ -5,10 +5,21 @@ content, session lists, and command output no longer goes through here.
 """
 from __future__ import annotations
 
+import os
+
 import pytesseract
 from PIL import Image
 
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+from tether.platform.capabilities import IS_WINDOWS
+
+# The Windows installer doesn't put tesseract on PATH, so pytesseract can't
+# find it without this. macOS/Linux installs (brew/apt) do put it on PATH,
+# and pytesseract finds it there by default — hardcoding this path there
+# would just point at a file that doesn't exist and break every OCR call.
+if IS_WINDOWS:
+    _DEFAULT_WINDOWS_PATH = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    if os.path.exists(_DEFAULT_WINDOWS_PATH):
+        pytesseract.pytesseract.tesseract_cmd = _DEFAULT_WINDOWS_PATH
 
 
 def ocr_text(img: Image.Image) -> str:

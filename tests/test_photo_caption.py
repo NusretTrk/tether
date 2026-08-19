@@ -49,7 +49,7 @@ def test_caption_triggers_a_second_clipboard_paste(monkeypatch):
     monkeypatch.setattr(cd, "capture_window", lambda hwnd: FakeImg(calls["n"]))
     monkeypatch.setattr(cd, "focus_window", lambda hwnd: True)
     monkeypatch.setattr(cd, "find_window_by_keyword", lambda kw: 12345)
-    monkeypatch.setattr(cd.win32gui, "GetWindowRect", lambda hwnd: (0, 0, 800, 600))
+    monkeypatch.setattr(cd, "get_window_rect", lambda hwnd: (0, 0, 800, 600))
 
     target = cd.ClaudeDesktopTarget("Claude")
     result = target.stage_photo(_make_test_image_bytes(), caption="hello world")
@@ -81,7 +81,7 @@ def test_no_caption_means_a_single_paste(monkeypatch):
     monkeypatch.setattr(cd, "capture_window", lambda hwnd: FakeImg())
     monkeypatch.setattr(cd, "focus_window", lambda hwnd: True)
     monkeypatch.setattr(cd, "find_window_by_keyword", lambda kw: 12345)
-    monkeypatch.setattr(cd.win32gui, "GetWindowRect", lambda hwnd: (0, 0, 800, 600))
+    monkeypatch.setattr(cd, "get_window_rect", lambda hwnd: (0, 0, 800, 600))
 
     target = cd.ClaudeDesktopTarget("Claude")
     result = target.stage_photo(_make_test_image_bytes())

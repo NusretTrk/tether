@@ -11,14 +11,14 @@ import time
 import pyautogui
 from PIL import Image
 
-from tether.platform.capabilities import CAPABILITIES, UnsupportedOnThisPlatform
+from tether.platform.capabilities import CAPABILITIES, IS_WINDOWS, UnsupportedOnThisPlatform
 
 log = logging.getLogger(__name__)
 
 # Imported only where they exist. Everything below raises a clear error on
 # other platforms instead of failing at import time and taking the whole
 # bot down when the monitoring half would have worked fine.
-if CAPABILITIES.window_control:
+if IS_WINDOWS and CAPABILITIES.window_control:
     from ctypes import windll
 
     import win32api
@@ -31,7 +31,13 @@ if CAPABILITIES.window_control:
 
 
 def _require_windows(feature: str) -> None:
-    if not CAPABILITIES.window_control:
+    # Every function below this point is Windows-specific by construction
+    # (raw win32 calls) — gated on IS_WINDOWS, not just window_control,
+    # because window_control is also True on macOS/Linux once their own
+    # implementations exist. Those platforms get their real
+    # find_window_by_keyword/focus_window/etc. from the dispatch at the
+    # bottom of this file, which overrides the names defined here.
+    if not (IS_WINDOWS and CAPABILITIES.window_control):
         raise UnsupportedOnThisPlatform(feature)
 
 
@@ -106,6 +112,12 @@ def focus_window(hwnd, retries: int = 4) -> bool:
     return False
 
 
+def get_window_rect(hwnd) -> tuple[int, int, int, int]:
+    """(left, top, right, bottom), screen pixels."""
+    _require_windows("Getting window rect")
+    return win32gui.GetWindowRect(hwnd)
+
+
 def _get_clipboard_text() -> str | None:
     """Current clipboard text, or None if the clipboard holds something
     else (or nothing)."""
@@ -148,10 +160,15 @@ class preserve_clipboard:
     doing nothing. Text covers the overwhelmingly common case; if the
     clipboard held an image or a file list, it is left as our content and
     that limitation is documented rather than half-handled.
+
+    Windows only for now - macOS/Linux paste still works without this, it
+    just won't restore whatever the user had copied beforehand. Text
+    clipboard preservation there would need a per-platform get/set (NSPasteboard
+    via pyobjc, or xclip) rather than the win32clipboard calls this uses.
     """
 
     def __init__(self, enabled: bool = True):
-        self.enabled = enabled and CAPABILITIES.window_control
+        self.enabled = enabled and IS_WINDOWS and CAPABILITIES.window_control
         self._saved: str | None = None
 
     def __enter__(self):
@@ -232,3 +249,26 @@ def capture_window(hwnd) -> Image.Image:
     mfc_dc.DeleteDC()
     win32gui.ReleaseDC(hwnd, hwnd_dc)
     return img
+
+
+# ---------------------------------------------------------------------
+# Non-Windows dispatch. Everything above this point is the original,
+# unchanged Windows implementation (raises via _require_windows if somehow
+# called on another OS). On macOS/Linux, once CAPABILITIES.window_control
+# is true, these imports override the names above with the real
+# implementations — see window_macos.py / window_linux.py for the
+# unverified AppleScript/xdotool mechanics and their known limitations.
+# ---------------------------------------------------------------------
+if not IS_WINDOWS and CAPABILITIES.window_control:
+    from tether.platform.capabilities import IS_LINUX, IS_MACOS
+
+    if IS_MACOS:
+        from tether.platform.window_macos import (  # noqa: F401,F811
+            capture_window, find_window_by_keyword, focus_window,
+            get_window_rect, set_clipboard_image,
+        )
+    elif IS_LINUX:
+        from tether.platform.window_linux import (  # noqa: F401,F811
+            capture_window, find_window_by_keyword, focus_window,
+            get_window_rect, set_clipboard_image,
+        )

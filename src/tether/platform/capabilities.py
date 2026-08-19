@@ -47,11 +47,17 @@ def detect() -> Capabilities:
             shell=True,
             power_control=True,
         )
-    # macOS control would need the Accessibility API via pyobjc and a
-    # trust prompt; Linux would need AT-SPI. Neither is implemented, so
-    # they are reported honestly rather than half working.
+    # Basic window control (find/focus/type/screenshot) is implemented for
+    # macOS (osascript/System Events) and Linux (xdotool, X11 only) - see
+    # platform/window_macos.py and window_linux.py. UNVERIFIED: built
+    # against documented syntax, never run on a real Mac/Linux machine.
+    #
+    # Session list / dialog detection / model & effort reading go through
+    # UIA on Windows, which has no macOS (Accessibility API) or Linux
+    # (AT-SPI) port here yet - accessibility stays honestly False rather
+    # than a guess at API surface nobody has verified.
     return Capabilities(
-        window_control=False,
+        window_control=True,
         accessibility=False,
         hardware_temps=False,
         shell=True,
