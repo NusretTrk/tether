@@ -29,6 +29,54 @@ class ConfigError(RuntimeError):
     pass
 
 
+def set_env_var(key: str, value: str) -> bool:
+    """Updates or appends a single KEY=value line in .env, leaving every
+    other line - including comments and blank lines - exactly as-is.
+    Used for setting secrets (NGROK_AUTHTOKEN) from inside a running bot
+    session (see transport/ngrok_setup.py) rather than requiring a manual
+    file edit, so the value only ever needs to exist in one place - never
+    echoed back, never written anywhere else, never logged.
+
+    Written atomically (temp file + rename) so a crash mid-write can't
+    leave .env truncated or corrupted - the same real file setup.py and
+    every other part of this project depends on for its own secrets.
+
+    Returns whether the write was actually verified on disk afterward -
+    read back fresh from the file itself, not through python-dotenv/
+    os.environ (load_dotenv defaults to never overriding an already-set
+    variable, so re-checking through os.environ after an UPDATE, as
+    opposed to a first-time set, would silently see the stale value and
+    report false confidence)."""
+    lines = ENV_PATH.read_text(encoding="utf-8").splitlines() if ENV_PATH.exists() else []
+    pattern_prefix = f"{key}="
+    replaced = False
+    for i, line in enumerate(lines):
+        if line.startswith(pattern_prefix):
+            lines[i] = f"{key}={value}"
+            replaced = True
+            break
+    if not replaced:
+        lines.append(f"{key}={value}")
+
+    tmp = ENV_PATH.parent / (ENV_PATH.name + ".tmp")
+    tmp.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    tmp.replace(ENV_PATH)
+
+    return get_env_var(key) == value
+
+
+def get_env_var(key: str) -> str | None:
+    """Reads a single value straight from .env on disk - deliberately not
+    through os.environ/load_dotenv, see set_env_var's docstring for why."""
+    if not ENV_PATH.exists():
+        return None
+    prefix = f"{key}="
+    for line in ENV_PATH.read_text(encoding="utf-8").splitlines():
+        if line.startswith(prefix):
+            return line[len(prefix):]
+    return None
+
+
 @dataclass
 class Secrets:
     bot_token: str

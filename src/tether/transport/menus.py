@@ -131,7 +131,23 @@ def miniapp_menu(_t) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton(_t("confirm_on"), callback_data="miniapp:set:on"),
          InlineKeyboardButton(_t("confirm_off"), callback_data="miniapp:set:off")],
+        [InlineKeyboardButton(_t("ngrok_configure_btn"), callback_data="ngroksetup:menu")],
         [back_button(_t, "menu:settings")],
+    ])
+
+
+def ngrok_setup_menu(_t, token_set: bool, domain: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(_t("ngrok_set_token_btn", state="✅" if token_set else "❌"), callback_data="ngroksetup:token")],
+        [InlineKeyboardButton(_t("ngrok_set_domain_btn", state=domain or "—"), callback_data="ngroksetup:domain")],
+        [back_button(_t, "miniapp:menu")],
+    ])
+
+
+def ngrok_confirm_menu(_t, kind: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(_t("staged_send"), callback_data=f"ngroksetup:confirm:{kind}"),
+         InlineKeyboardButton(_t("staged_cancel"), callback_data=f"ngroksetup:confirm_cancel:{kind}")],
     ])
 
 

@@ -110,6 +110,18 @@ class AppState:
     # start or stop these mid-run without a process restart.
     miniapp_server: object | None = None
     ngrok_runner: object | None = None
+
+    # Bot-side capture of the ngrok authtoken/domain, so setting them up
+    # doesn't require hand-editing .env/config.yaml. See
+    # transport/ngrok_setup.py. Only one of these is ever active at a
+    # time in practice, but both exist independently rather than a single
+    # shared "what am I waiting for" slot, matching this codebase's
+    # existing style of explicit named fields (staged_cmd, staged_text,
+    # pending_shutdown_minutes, ...) over one generic catch-all.
+    pending_ngrok_token_since: float | None = None
+    staged_ngrok_token: str | None = None
+    pending_ngrok_domain_since: float | None = None
+    staged_ngrok_domain: str | None = None
     # Set once in bot.py's _post_init (the first point with a running
     # loop). Lets code running on a foreign OS thread - the Mini App's
     # own HTTP server - schedule an async Bot API call back onto it via

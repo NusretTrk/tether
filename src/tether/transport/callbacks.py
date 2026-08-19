@@ -220,14 +220,59 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await edit(_t("miniapp_prompt", state=_t("confirm_" + current)), menus.miniapp_menu(_t))
         elif action == "set":
             on = parts[2] == "on"
-            if on and not state.config.settings.mini_app_ngrok_domain.strip():
-                await edit(_t("miniapp_missing_config"), menus.settings_menu(_t))
+            if on and (not state.config.settings.mini_app_ngrok_domain.strip() or not state.config.secrets.ngrok_authtoken):
+                await edit(_t("miniapp_missing_config"), menus.miniapp_menu(_t))
                 return
             state.config.settings.mini_app_enabled = on
             state.config.settings.save()
             from tether.miniapp.lifecycle import apply_mini_app_state
             await asyncio.to_thread(apply_mini_app_state, state, context.bot, state.event_loop)
             await edit(_t("miniapp_set", state=_t("confirm_on" if on else "confirm_off")), menus.settings_menu(_t))
+        return
+
+    # ---- ngrok credential setup (token/domain), see transport/ngrok_setup.py ----
+    if category == "ngroksetup":
+        from tether.transport import ngrok_setup
+        action = parts[1]
+        if action == "menu":
+            token_set = bool(state.config.secrets.ngrok_authtoken)
+            domain = state.config.settings.mini_app_ngrok_domain
+            await edit(_t("ngrok_setup_title"), menus.ngrok_setup_menu(_t, token_set, domain))
+        elif action == "token":
+            await ngrok_setup.start_token_capture(context.bot, state.config.secrets.chat_id, state, _t)
+        elif action == "domain":
+            await ngrok_setup.start_domain_capture(context.bot, state.config.secrets.chat_id, state, _t)
+        elif action == "confirm":
+            kind = parts[2]
+            if kind == "token":
+                value = state.staged_ngrok_token
+                state.staged_ngrok_token = None
+                if value is None:
+                    await edit(_t("staged_cancelled"))
+                    return
+                from tether.config import set_env_var
+                verified = await asyncio.to_thread(set_env_var, "NGROK_AUTHTOKEN", value)
+                if verified:
+                    state.config.secrets.ngrok_authtoken = value
+                    await edit(_t("ngrok_token_saved"))
+                else:
+                    await edit(_t("ngrok_token_save_failed"))
+            elif kind == "domain":
+                value = state.staged_ngrok_domain
+                state.staged_ngrok_domain = None
+                if value is None:
+                    await edit(_t("staged_cancelled"))
+                    return
+                state.config.settings.mini_app_ngrok_domain = value
+                state.config.settings.save()
+                await edit(_t("ngrok_domain_saved", domain=value))
+        elif action == "confirm_cancel":
+            kind = parts[2]
+            if kind == "token":
+                state.staged_ngrok_token = None
+            else:
+                state.staged_ngrok_domain = None
+            await edit(_t("staged_cancelled"))
         return
 
     # ---- deferred message (held because the user was at the keyboard) ----

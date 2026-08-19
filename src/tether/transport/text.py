@@ -59,6 +59,14 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     _t = make_translator(state.config.settings.language)
     text = update.message.text.strip()
 
+    # 0. Pending ngrok token/domain capture? Checked before literally
+    # anything else - a captured secret must never fall through to being
+    # typed into the target app's composer or treated as a keypad
+    # shortcut. See transport/ngrok_setup.py.
+    from tether.transport import ngrok_setup
+    if await ngrok_setup._maybe_capture(update, context, state, _t):
+        return
+
     # 1. Pending agent question?
     pending = shared_state.read_pending()
     if pending is not None:

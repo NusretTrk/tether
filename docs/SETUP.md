@@ -103,26 +103,41 @@ ever committed or logged.
    It's yours permanently, it never rotates, and it costs nothing.
 3. Install the ngrok agent (https://ngrok.com/download) and make sure
    `ngrok` runs from a terminal, or note the full path to the binary.
-4. Copy your authtoken from https://dashboard.ngrok.com/get-started/your-authtoken
-   into `.env`:
+4. Copy your authtoken from https://dashboard.ngrok.com/get-started/your-authtoken.
+   Set it and your domain either by hand, or from inside the bot itself —
+   both work, pick whichever's easier:
+
+   **From the bot** (no file editing): `/settings` → Mini App →
+   Configure ngrok → Authtoken / Domain. Paste the token as a plain
+   message when asked; the bot tries to delete that message from the
+   chat immediately after reading it, shows you only a masked
+   confirmation (never the full value again), and asks you to confirm
+   before writing anything. The token is written straight to `.env` —
+   never through any other file, never logged. Takes effect immediately,
+   no restart needed.
+
+   **By hand**, in `.env`:
    ```
    NGROK_AUTHTOKEN=your token here
    ```
-5. In `config.yaml`:
+   and in `config.yaml`:
    ```yaml
-   mini_app_enabled: true
    mini_app_ngrok_domain: "yourname.ngrok-free.app"
    mini_app_ngrok_path: ngrok   # only change this if it's not on PATH
    ```
+5. Turn it on: `/settings` → Mini App → on (refuses with a clear message
+   if the token or domain isn't set yet — nothing half-starts).
 6. Message **@BotFather**, send `/mybots`, pick your bot → **Bot
    Settings → Menu Button → Configure menu button**, and send it
    `https://yourname.ngrok-free.app/` as the URL. (This pairs the domain
    with your bot — a one-time step Telegram requires, done through
    BotFather rather than the Bot API, since domain pairing isn't
    something a bot can do to itself.)
-7. Restart tether. Your chat's menu button (bottom-left, next to the
-   text box) now opens the Mini App. `/start` re-syncs the button any
-   time it looks stale or you're not sure it picked up a change.
+7. If you set the token/domain by hand (not through the bot), restart
+   tether now so it picks up the file changes — the bot-side path in
+   step 4 already applied everything live. Either way, your chat's menu
+   button (bottom-left, next to the text box) now opens the Mini App.
+   `/start` re-syncs the button any time it looks stale.
 
 **Turning it off:** `/settings` → Mini App → off, or flip the same
 switch from inside the Mini App itself. Either way, the tunnel and local
