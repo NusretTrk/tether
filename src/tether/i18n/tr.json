@@ -1,5 +1,12 @@
 {
   "start_welcome": "Tether bağlandı. Aşağıdaki butonları veya her şey için /menu komutunu kullan.",
+  "session_recovered": "Tether yeniden başladı ve şunu kurtardı: {details}. Bu sohbetteki butonlar hâlâ çalışıyor.",
+  "session_recovered_deferred": "gönderilmeyi bekleyen bir mesaj",
+  "session_recovered_staged": "onayını bekleyen, hazırlanmış bir mesaj",
+  "session_recovered_staged_cmd": "onayını bekleyen bir /cmd komutu",
+  "session_recovered_pending_shutdown": "onayını bekleyen bir /shutdown",
+  "session_recovered_unverified_send": "Tether bunu gönderdikten hemen sonra yeniden başladı — teslimat doğrulanamadı, lütfen sohbeti kontrol et:\n\n{text}",
+  "session_recovered_unverified_send_generic": "Tether bir mesaj gönderdikten hemen sonra yeniden başladı — teslimat doğrulanamadı, lütfen sohbeti kontrol et.",
   "help_text": "/menu - tüm komut menüsü\n/sessions - oturumları listele ve geç\n/unlock <şifre> - botu kilidini aç (şifre ayarlıysa)\n/lock - botu tekrar kilitle\n/screen <pencere> - pencere görüntüsü al\n/files - aktif projedeki son dosyaları listele\n/file <yol> - bir dosya getir\n/model <isim> - model değiştir\n/effort <seviye> - effort değiştir\n/cmd <komut> - PowerShell komutu çalıştır\n/clear - giriş kutusunu temizle\n/stop - mevcut üretimi durdur\n/kill - terminal/emulator/Claude'u kapat\n/target [isim] - düz mesajlar nereye gitsin (Claude ya da bir keypad_profiles ismi)\n/restart - Claude Desktop'ı yeniden başlat\n/shutdown <dakika>|cancel - bu PC'yi kapat\n/status - mevcut model, effort, sıcaklıklar\n/language - dil değiştir\n/mode - çıktı ayrıntı düzeyini değiştir\n/confirm on|off - gönderim onayını aç/kapat\n/settings - ayarları görüntüle/düzenle\n/help - bu mesaj",
   "btn_status": "📊 Durum",
   "btn_screen": "📸 Ekran",

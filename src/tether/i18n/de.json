@@ -1,5 +1,12 @@
 {
   "start_welcome": "Tether ist verbunden. Nutze die Buttons unten oder /menu für alles.",
+  "session_recovered": "Tether wurde neu gestartet und hat wiederhergestellt: {details}. Die Buttons in diesem Chat funktionieren weiterhin.",
+  "session_recovered_deferred": "eine Nachricht, die noch gesendet werden soll",
+  "session_recovered_staged": "eine Nachricht, die deiner Bestätigung wartet",
+  "session_recovered_staged_cmd": "einen /cmd-Befehl, der deiner Bestätigung wartet",
+  "session_recovered_pending_shutdown": "ein ausstehendes /shutdown, das deiner Bestätigung wartet",
+  "session_recovered_unverified_send": "Tether wurde neu gestartet, direkt nachdem das hier gesendet wurde — Zustellung konnte nicht bestätigt werden, bitte im Chat prüfen:\n\n{text}",
+  "session_recovered_unverified_send_generic": "Tether wurde neu gestartet, direkt nachdem eine Nachricht gesendet wurde — Zustellung konnte nicht bestätigt werden, bitte im Chat prüfen.",
   "help_text": "/menu - vollständiges Befehlsmenü\n/sessions - Sitzungen auflisten und wechseln\n/unlock <Passwort> - Bot entsperren (falls ein Passwort gesetzt ist)\n/lock - Bot wieder sperren\n/screen <Fenster> - Fenster als Screenshot\n/files - aktuelle Dateien im aktiven Projekt auflisten\n/file <Pfad> - eine Datei abrufen\n/model <Name> - Modell wechseln\n/effort <Stufe> - Effort wechseln\n/cmd <Befehl> - PowerShell-Befehl ausführen\n/clear - Eingabefeld leeren\n/stop - aktuelle Generierung stoppen\n/kill - Terminal/Emulator/Claude schließen\n/target [Name] - wohin einfache Nachrichten gehen (Claude oder ein keypad_profiles-Name)\n/restart - Claude Desktop neu starten\n/shutdown <Minuten>|cancel - diesen PC herunterfahren\n/status - aktuelles Modell, Effort, Temperaturen\n/language - Sprache ändern\n/mode - Ausgabe-Ausführlichkeit ändern\n/confirm on|off - Sendebestätigung umschalten\n/settings - Einstellungen anzeigen/bearbeiten\n/help - diese Nachricht",
   "btn_status": "📊 Status",
   "btn_screen": "📸 Bildschirm",

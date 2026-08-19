@@ -103,7 +103,6 @@ class AppState:
 
     staged_text: str | None = None
     staged_photo: bool = False
-    active_ask_id: str | None = None
 
     # Set right after pressing Enter; cleared by transcript_job once the
     # matching USER_TEXT event is actually observed in the transcript — the

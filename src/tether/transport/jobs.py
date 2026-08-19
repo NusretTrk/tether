@@ -584,3 +584,13 @@ async def target_transcript_job(context: ContextTypes.DEFAULT_TYPE) -> None:
             await context.bot.send_message(
                 chat_id, f"[{name}] {icon} {summary}: {truncate_with_notice(event.text, 1500, '…')}",
             )
+
+
+async def state_snapshot_job(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Periodically dumps the in-flight state (deferred/staged/pending
+    confirmations) to disk so a crash or watchdog restart doesn't silently
+    drop it. See transport/persistence.py for what gets restored and why."""
+    from tether.transport import persistence
+
+    state = context.bot_data["state"]
+    persistence.save(state)

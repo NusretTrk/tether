@@ -9,15 +9,17 @@ from telegram import BotCommand
 from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, CommandHandler, MessageHandler, filters
 
 from tether.config import Config
+from tether.i18n import make_translator
 from tether.platform.capabilities import CAPABILITIES, platform_name
 from tether.logsetup import setup_logging
-from tether.transport import handlers
+from tether.transport import handlers, persistence
 from tether.transport.callbacks import handle_callback
 from tether.transport.state import AppState
 from tether.transport.text import handle_photo, handle_text
 from tether.transport.jobs import (
     activity_job, app_health_job, deferred_send_job, dialog_job, stall_job,
-    target_transcript_job, temp_monitor_job, transcript_job, usage_limit_job,
+    state_snapshot_job, target_transcript_job, temp_monitor_job, transcript_job,
+    usage_limit_job,
 )
 
 log = logging.getLogger(__name__)
@@ -57,10 +59,38 @@ STARTUP_RETRY_INTERVAL_SEC = 30
 async def _post_init(app: Application) -> None:
     await app.bot.set_my_commands(BOT_COMMANDS)
 
+    state = app.bot_data["state"]
+    recovered = app.bot_data.pop("_recovered_summary", {})
+    if not recovered:
+        return
+    _t = make_translator(state.config.settings.language)
+    chat_id = state.config.secrets.chat_id
+
+    pieces = []
+    if recovered.get("deferred"):
+        pieces.append(_t("session_recovered_deferred"))
+    if recovered.get("staged"):
+        pieces.append(_t("session_recovered_staged"))
+    if recovered.get("staged_cmd"):
+        pieces.append(_t("session_recovered_staged_cmd"))
+    if recovered.get("pending_shutdown"):
+        pieces.append(_t("session_recovered_pending_shutdown"))
+    if pieces:
+        await app.bot.send_message(chat_id, _t("session_recovered", details=", ".join(pieces)))
+
+    if "unverified_send" in recovered:
+        text = recovered["unverified_send"]
+        if text:
+            await app.bot.send_message(chat_id, _t("session_recovered_unverified_send", text=text))
+        else:
+            await app.bot.send_message(chat_id, _t("session_recovered_unverified_send_generic"))
+
 
 def _build_app(config: Config) -> Application:
     app = ApplicationBuilder().token(config.secrets.bot_token).post_init(_post_init).build()
-    app.bot_data["state"] = AppState.build(config)
+    state = AppState.build(config)
+    app.bot_data["state"] = state
+    app.bot_data["_recovered_summary"] = persistence.restore_into(state)
 
     app.add_handler(CommandHandler("start", handlers.cmd_start))
     app.add_handler(CommandHandler("help", handlers.cmd_help))
@@ -107,6 +137,7 @@ def _build_app(config: Config) -> Application:
     else:
         log.info("accessibility features unavailable on %s - session and dialog watchers disabled", platform_name())
     app.job_queue.run_repeating(stall_job, interval=15, first=30)
+    app.job_queue.run_repeating(state_snapshot_job, interval=5, first=5)
     if CAPABILITIES.window_control:
         app.job_queue.run_repeating(deferred_send_job, interval=5, first=20)
     if CAPABILITIES.window_control:

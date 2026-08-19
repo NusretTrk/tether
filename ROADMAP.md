@@ -47,35 +47,52 @@ forgotten — if it's not done, it's below with a reason.
   way — command output was never actually HTML-escaped despite a test file
   claiming it was, because that test only covered a standalone helper and
   never the real code path
+- Reading Antigravity's own replies back through Telegram — tails its local
+  `transcript.jsonl` (same idea as Claude Code's own transcript, different
+  vocabulary) the moment `/target antigravity` is active, prefixed
+  `[antigravity]` so it's never confused with the Claude relay. Cursor has
+  no equivalent yet — its history lives in an undocumented internal SQLite
+  schema, not a plain JSONL, so it's left honestly unbuilt rather than
+  reverse-engineered blind
+- Model picker OCR search scoped to a region around the click point instead
+  of the whole window — an unscoped substring search could otherwise match
+  and click unrelated visible text (a file name, a menu label) anywhere
+  else in the target app's window
+- **Crash-safe state** — `pending_send`, staged messages/photos, staged
+  `/cmd`, and a pending `/shutdown` are snapshotted to disk every few
+  seconds and restored on the next startup, so a crash or watchdog restart
+  mid-flow doesn't just silently drop them. `ask()` was already crash-safe
+  before this (its handoff was file-based from the start). Deliberately
+  asymmetric: anything that hadn't touched the target window yet comes
+  back fully live; a message where Enter was already pressed comes back as
+  an honest "couldn't verify delivery" notice instead of faking a
+  confirmation a fresh transcript tailer could never actually observe.
 
 ## Next (reliability)
 
-1. **Crash-safe state** — `pending_send`, staged photos, and pending
-   `ask()` all live in memory; a restart mid-flow loses them.
-2. **Real macOS/Linux verification** — the window control code is written
+1. **Real macOS/Linux verification** — the window control code is written
    against documented syntax, never run on real hardware. Needs someone
    with a Mac or Linux box to actually try it and report what breaks.
 
 ## Then (deeper multi-app control)
 
-4. **Reading Cursor/Antigravity state** — `/target` covers typing and
-   sending now; reading their session/state doesn't exist, since that
-   needs each app's own accessibility surface rather than window
-   automation, the same gap that keeps macOS/Linux at "basic" control.
-5. **Customizable everything** — more settings editable from Telegram
+2. **Reading Cursor's state** — Antigravity's replies are read back now;
+   Cursor's aren't, since its history lives in an undocumented internal
+   SQLite schema rather than a plain transcript file.
+3. **Customizable everything** — more settings editable from Telegram
    rather than config.yaml + restart. Keypad profiles (and now target
    profiles) exist as the pattern; extend it to window keywords,
    intervals, thresholds, watcher toggles.
 
 ## After that (interface)
 
-6. **Telegram Mini App** — real UI inside Telegram: scrollable transcript,
+4. **Telegram Mini App** — real UI inside Telegram: scrollable transcript,
    session list, settings forms instead of nested button menus. Needs free
    static hosting plus a tunnel to reach the PC.
-7. **Voice** — ElevenLabs for output, transcription for input. Interfaces
+5. **Voice** — ElevenLabs for output, transcription for input. Interfaces
    already defined in `voice/base.py`, nothing implemented. Telegram has
    no native speech either direction.
-8. **Cloud relay + Wake-on-LAN** — a small always-on instance so Telegram
+6. **Cloud relay + Wake-on-LAN** — a small always-on instance so Telegram
    still answers when the PC is off: reports offline, queues commands, can
    wake the machine. Constraint: only one process may poll a bot token, so
    the relay has to own polling and forward to the PC rather than run

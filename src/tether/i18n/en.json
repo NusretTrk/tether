@@ -1,5 +1,12 @@
 {
   "start_welcome": "Tether is connected. Use the buttons below or /menu for everything.",
+  "session_recovered": "Tether restarted and recovered: {details}. The buttons already in this chat still work.",
+  "session_recovered_deferred": "a message waiting to be sent",
+  "session_recovered_staged": "a message staged and awaiting your confirmation",
+  "session_recovered_staged_cmd": "a /cmd command awaiting your confirmation",
+  "session_recovered_pending_shutdown": "a pending /shutdown awaiting your confirmation",
+  "session_recovered_unverified_send": "Tether restarted right after sending this — couldn't verify delivery, please check the chat:\n\n{text}",
+  "session_recovered_unverified_send_generic": "Tether restarted right after sending a message — couldn't verify delivery, please check the chat.",
   "help_text": "/menu - full command menu\n/unlock <password> - unlock the bot (if a password is set)\n/lock - re-lock the bot\n/sessions - list and switch sessions\n/screen <window> - screenshot a window\n/files - list recent files in the active project\n/file <path> - fetch one file\n/model <name> - switch model\n/effort <level> - switch effort\n/cmd <command> - run a PowerShell command\n/clear - clear the input box\n/stop - stop the current generation\n/kill - close terminal/emulator/Claude\n/target [name] - where plain messages go (Claude, or a keypad_profiles name)\n/restart - restart Claude Desktop\n/shutdown <minutes>|cancel - shut down this PC\n/status - current model, effort, temps\n/language - change language\n/mode - change output verbosity\n/confirm on|off - toggle send confirmation\n/settings - view/edit settings\n/help - this message",
   "btn_status": "📊 Status",
   "btn_screen": "📸 Screen",

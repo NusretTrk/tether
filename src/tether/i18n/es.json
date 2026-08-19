@@ -1,5 +1,12 @@
 {
   "start_welcome": "Tether está conectado. Usa los botones de abajo o /menu para todo.",
+  "session_recovered": "Tether se reinició y recuperó: {details}. Los botones ya presentes en este chat siguen funcionando.",
+  "session_recovered_deferred": "un mensaje pendiente de enviar",
+  "session_recovered_staged": "un mensaje preparado a la espera de tu confirmación",
+  "session_recovered_staged_cmd": "un comando /cmd a la espera de tu confirmación",
+  "session_recovered_pending_shutdown": "un /shutdown pendiente a la espera de tu confirmación",
+  "session_recovered_unverified_send": "Tether se reinició justo después de enviar esto — no se pudo confirmar la entrega, revisa el chat:\n\n{text}",
+  "session_recovered_unverified_send_generic": "Tether se reinició justo después de enviar un mensaje — no se pudo confirmar la entrega, revisa el chat.",
   "help_text": "/menu - menú completo de comandos\n/sessions - listar y cambiar de sesión\n/unlock <contraseña> - desbloquear el bot (si hay contraseña configurada)\n/lock - volver a bloquear el bot\n/screen <ventana> - captura de una ventana\n/files - listar archivos recientes del proyecto activo\n/file <ruta> - obtener un archivo\n/model <nombre> - cambiar modelo\n/effort <nivel> - cambiar effort\n/cmd <comando> - ejecutar un comando de PowerShell\n/clear - vaciar el cuadro de entrada\n/stop - detener la generación actual\n/kill - cerrar terminal/emulador/Claude\n/target [nombre] - a dónde van los mensajes normales (Claude o un nombre de keypad_profiles)\n/restart - reiniciar Claude Desktop\n/shutdown <minutos>|cancel - apagar este PC\n/status - modelo, effort y temperaturas actuales\n/language - cambiar idioma\n/mode - cambiar el nivel de detalle de salida\n/confirm on|off - activar/desactivar confirmación de envío\n/settings - ver/editar ajustes\n/help - este mensaje",
   "btn_status": "📊 Estado",
   "btn_screen": "📸 Pantalla",
