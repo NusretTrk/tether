@@ -34,6 +34,7 @@ from tether.monitors.lockout import LockoutDecider, LockoutPolicy
 log = logging.getLogger(__name__)
 
 MAX_BODY_BYTES = 8192
+MAX_SEND_TEXT_LENGTH = 4096  # matches Telegram's own message length cap
 MAX_CONCURRENT_CONNECTIONS = 20
 ALLOWED_LANGUAGES = {"en", "tr", "de", "es"}
 ALLOWED_OUTPUT_MODES = {"live", "summary", "quiet", "verbose"}
@@ -248,6 +249,9 @@ class _Handler(BaseHTTPRequestHandler):
         if path == "/api/settings":
             self._handle_settings_post()
             return
+        if path == "/api/send":
+            self._handle_send()
+            return
         self._send_json(404, {"error": "not_found"})
 
     # ---- handlers ----
@@ -284,6 +288,48 @@ class _Handler(BaseHTTPRequestHandler):
             return
         ok = self.server.state.target.switch_session(name)
         self._send_json(200 if ok else 409, {"ok": ok})
+
+    def _handle_send(self):
+        """Types a message into the target app from the Mini App's own
+        compose box - goes through transport.text.send_text_to_target,
+        the exact same staging/presence-deferral/confirm_before_send path
+        a real Telegram message takes, not a separate shortcut. In
+        particular: if the owner is physically at the keyboard right now,
+        this is HELD rather than stealing focus, same as always - sending
+        it from a phone doesn't bypass that protection."""
+        if self._authorize() is None:
+            return
+        body = self._read_json_body()
+        text = (body or {}).get("text")
+        if not text or not isinstance(text, str) or not text.strip():
+            self._send_json(400, {"error": "missing_text"})
+            return
+        text = text.strip()
+        if len(text) > MAX_SEND_TEXT_LENGTH:
+            self._send_json(400, {"error": "text_too_long"})
+            return
+
+        state = self.server.state
+        from tether.i18n import make_translator
+        _t = make_translator(state.config.settings.language)
+        chat_id = state.config.secrets.chat_id
+        bot = self.server.bot
+
+        async def notify(msg_text, reply_markup=None):
+            return await bot.send_message(chat_id, msg_text, reply_markup=reply_markup)
+
+        from tether.transport.text import send_text_to_target
+        future = asyncio.run_coroutine_threadsafe(
+            send_text_to_target(state, _t, text, notify), self.server.event_loop,
+        )
+        try:
+            status = future.result(timeout=20)
+        except Exception:
+            log.warning("mini app: /api/send failed", exc_info=True)
+            self._send_json(500, {"error": "send_failed"})
+            return
+
+        self._send_json(200, {"status": status})
 
     def _handle_transcript(self):
         if self._authorize() is None:

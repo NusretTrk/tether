@@ -44,6 +44,8 @@ class FakeTarget:
         self.switched_to = None
         self.sessions = [Session(name="proj-a", running=True), Session(name="proj-b", running=False)]
         self.status = TargetStatus(model="Sonnet", effort="high")
+        self.staged_texts = []
+        self.enter_presses = 0
 
     def list_sessions(self):
         return self.sessions
@@ -54,6 +56,15 @@ class FakeTarget:
 
     def read_status(self):
         return self.status
+
+    def stage_text(self, text):
+        self.staged_texts.append(text)
+        from tether.targets.base import PasteResult
+        return PasteResult(True)
+
+    def press_enter(self):
+        self.enter_presses += 1
+        return True
 
 
 @dataclass
@@ -102,6 +113,14 @@ class FakeState:
     miniapp_server: object = None
     ngrok_runner: object = None
     unlocked: bool = True  # default matches the common case (no BOT_PASSWORD set)
+    deferred_text: str | None = None
+    deferred_photo_bytes: bytes | None = None
+    deferred_caption: str = ""
+    deferred_message_id: int | None = None
+    staged_text: str | None = None
+    pending_send_text: str | None = None
+    pending_send_message_id: int | None = None
+    pending_send_since: float = 0.0
 
 
 @pytest.fixture
@@ -113,6 +132,55 @@ def running_server():
     thread.start()
     port = server.server_address[1]
     yield server, f"http://127.0.0.1:{port}", state
+    server.shutdown()
+    server.server_close()
+
+
+class FakeBot:
+    def __init__(self):
+        self.sent = []
+
+    async def send_message(self, chat_id, text, reply_markup=None):
+        self.sent.append(text)
+        return type("M", (), {"message_id": 1})()
+
+
+@pytest.fixture
+def send_capable_server(monkeypatch):
+    """/api/send bridges onto a real asyncio event loop (the same way the
+    live bot's own loop is used) - spun up on its own background thread
+    here so the test can drive it with plain synchronous HTTP calls."""
+    import asyncio
+    import threading
+
+    monkeypatch.setattr("tether.transport.text.is_user_active", lambda threshold: False)
+
+    state = FakeState()
+    loop_ready = threading.Event()
+    holder = {}
+
+    def run_loop():
+        loop = asyncio.new_event_loop()
+        holder["loop"] = loop
+        asyncio.set_event_loop(loop)
+        loop_ready.set()
+        loop.run_forever()
+
+    loop_thread = threading.Thread(target=run_loop, daemon=True)
+    loop_thread.start()
+    loop_ready.wait(timeout=5)
+
+    bot = FakeBot()
+    server = MiniAppServer(("127.0.0.1", 0), state, bot=bot, event_loop=holder["loop"])
+    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server_thread.start()
+    port = server.server_address[1]
+
+    yield server, f"http://127.0.0.1:{port}", state, bot
+
+    server.shutdown()
+    server.server_close()
+    holder["loop"].call_soon_threadsafe(holder["loop"].stop)
     server.shutdown()
     server.server_close()
 
@@ -439,3 +507,105 @@ def test_connection_over_cap_is_dropped_without_spawning_a_thread(running_server
     server.process_request("req-2", ("127.0.0.1", 2))  # over cap - dropped
     assert shutdown_calls == ["req-2"]
     assert "req-2" not in spawned
+
+
+# --- /api/send: the Mini App's own compose box, wired through the exact
+# same transport.text.send_text_to_target real Telegram messages use. ---
+
+def test_send_requires_auth(send_capable_server):
+    server, base, state, bot = send_capable_server
+    status, body = _request(base + "/api/send", method="POST", body={"text": "hello"})
+    assert status == 401
+
+
+def test_send_types_the_message_and_presses_enter(send_capable_server):
+    server, base, state, bot = send_capable_server
+    state.config.settings.confirm_before_send = False
+    status, body = _request(
+        base + "/api/send", method="POST",
+        headers={"Authorization": "tma " + valid_init_data()},
+        body={"text": "hello claude"},
+    )
+    assert status == 200
+    assert body["status"] == "sent_pending_verification"
+    assert state.target.staged_texts == ["hello claude"]
+    assert state.target.enter_presses == 1
+
+
+def test_send_respects_confirm_before_send(send_capable_server):
+    server, base, state, bot = send_capable_server
+    state.config.settings.confirm_before_send = True
+
+    status, body = _request(
+        base + "/api/send", method="POST",
+        headers={"Authorization": "tma " + valid_init_data()},
+        body={"text": "hello claude"},
+    )
+    assert status == 200
+    assert body["status"] == "staged"
+    assert state.target.enter_presses == 0, "must not press enter before confirmation"
+    assert state.staged_text == "hello claude"
+
+
+def test_send_a_telegram_notification_is_sent_too(send_capable_server):
+    """The Mini App's own send still produces the normal Telegram-side
+    confirmation message - it's an additional way to send, not a silent
+    side channel invisible from the chat."""
+    server, base, state, bot = send_capable_server
+    _request(
+        base + "/api/send", method="POST",
+        headers={"Authorization": "tma " + valid_init_data()},
+        body={"text": "hello claude"},
+    )
+    assert len(bot.sent) >= 1
+
+
+def test_send_rejects_empty_text(send_capable_server):
+    server, base, state, bot = send_capable_server
+    status, body = _request(
+        base + "/api/send", method="POST",
+        headers={"Authorization": "tma " + valid_init_data()},
+        body={"text": "   "},
+    )
+    assert status == 400
+    assert body["error"] == "missing_text"
+    assert state.target.staged_texts == []
+
+
+def test_send_rejects_missing_text_key(send_capable_server):
+    server, base, state, bot = send_capable_server
+    status, body = _request(
+        base + "/api/send", method="POST",
+        headers={"Authorization": "tma " + valid_init_data()},
+        body={},
+    )
+    assert status == 400
+    assert body["error"] == "missing_text"
+
+
+def test_send_rejects_overly_long_text(send_capable_server):
+    server, base, state, bot = send_capable_server
+    status, body = _request(
+        base + "/api/send", method="POST",
+        headers={"Authorization": "tma " + valid_init_data()},
+        body={"text": "x" * 5000},
+    )
+    assert status == 400
+    assert body["error"] == "text_too_long"
+    assert state.target.staged_texts == []
+
+
+def test_send_is_deferred_when_user_is_active(send_capable_server, monkeypatch):
+    monkeypatch.setattr("tether.transport.text.is_user_active", lambda threshold: True)
+    monkeypatch.setattr("tether.transport.text.idle_seconds", lambda: 2.0)
+    server, base, state, bot = send_capable_server
+
+    status, body = _request(
+        base + "/api/send", method="POST",
+        headers={"Authorization": "tma " + valid_init_data()},
+        body={"text": "hello claude"},
+    )
+    assert status == 200
+    assert body["status"] == "deferred"
+    assert state.target.staged_texts == [], "window must not be touched while the user is active"
+    assert state.deferred_text == "hello claude"

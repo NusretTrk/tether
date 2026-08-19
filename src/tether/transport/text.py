@@ -118,21 +118,46 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     # 3. Message for the target app.
-    # Presence is checked *before* staging, not after: staging focuses the
-    # window and types, so by the time it fails it has already interrupted
-    # whoever was at the keyboard.
+    async def notify(text, reply_markup=None):
+        return await update.message.reply_text(text, reply_markup=reply_markup)
+
+    await send_text_to_target(state, _t, text, notify)
+
+
+async def send_text_to_target(state, _t, text: str, notify) -> str:
+    """The actual "type this into the target app" flow: presence-deferral,
+    staging, confirm_before_send, and ground-truth pending_send tracking.
+    Factored out of handle_text so the Mini App's own /api/send endpoint
+    (see miniapp/server.py) goes through the exact same behavior a real
+    Telegram message would - not a second, easily-drifting copy of it.
+
+    `notify(text, reply_markup=None) -> Awaitable[Message]` sends a new
+    status message to the chat - handle_text binds it to
+    update.message.reply_text, the Mini App binds it to
+    context.bot.send_message(chat_id, ...), since there's no original
+    message to reply to when the text came from the Mini App's own
+    compose box.
+
+    Returns a short status string: "deferred", "stage_failed", "staged",
+    "focus_failed", "sent_pending_verification", or "sent_unverified" -
+    used by the Mini App to react in its own UI without needing to also
+    watch the Telegram chat.
+
+    Presence is checked *before* staging, not after: staging focuses the
+    window and types, so by the time it fails it has already interrupted
+    whoever was at the keyboard.
+    """
     threshold = state.config.settings.defer_when_user_active_sec
     if await asyncio.to_thread(is_user_active, threshold):
         idle = await asyncio.to_thread(idle_seconds)
         state.deferred_text = text
         state.deferred_photo_bytes = None
         state.deferred_caption = ""
-        msg = await update.message.reply_text(
-            _t("deferred_user_active", seconds=int(idle or 0)),
-            reply_markup=menus.deferred_keyboard(_t),
+        msg = await notify(
+            _t("deferred_user_active", seconds=int(idle or 0)), menus.deferred_keyboard(_t),
         )
         state.deferred_message_id = msg.message_id
-        return
+        return "deferred"
 
     target = active_target(state)
     result = await asyncio.to_thread(target.stage_text, text)
@@ -141,32 +166,32 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "window_not_found": "claude_not_found",
             "focus_failed": "focus_failed",
         }.get(result.reason, "staged_send_failed")
-        await update.message.reply_text(_t(reason_key))
-        return
+        await notify(_t(reason_key))
+        return "stage_failed"
 
     if state.config.settings.confirm_before_send:
         state.staged_text = text
-        await update.message.reply_text(
-            _t("staged_message_prompt", text=text), reply_markup=menus.staged_message_keyboard(_t)
-        )
-        return
+        await notify(_t("staged_message_prompt", text=text), menus.staged_message_keyboard(_t))
+        return "staged"
 
     ok = await asyncio.to_thread(target.press_enter)
     if not ok:
-        await update.message.reply_text(_t("focus_failed"))
-        return
+        await notify(_t("focus_failed"))
+        return "focus_failed"
 
     # Ground-truth confirmation (below) only works for Claude Desktop - it
     # watches the Claude transcript for a matching event, which a message
     # sent to a /target-selected app would never produce, so it would
     # falsely report "failed" after the 10s timeout for every other target.
     if target is state.target:
-        sent_msg = await update.message.reply_text("…")
+        sent_msg = await notify("…")
         state.pending_send_text = text
         state.pending_send_message_id = sent_msg.message_id
         state.pending_send_since = time.monotonic()
+        return "sent_pending_verification"
     else:
-        await update.message.reply_text(_t("staged_sent_unverified"))
+        await notify(_t("staged_sent_unverified"))
+        return "sent_unverified"
 
 
 @restricted
