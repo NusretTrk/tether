@@ -239,6 +239,9 @@ class _Handler(BaseHTTPRequestHandler):
         if path == "/api/settings":
             self._handle_settings_get()
             return
+        if path == "/api/models":
+            self._handle_models()
+            return
         self._send_json(404, {"error": "not_found"})
 
     def do_POST(self):
@@ -251,6 +254,18 @@ class _Handler(BaseHTTPRequestHandler):
             return
         if path == "/api/send":
             self._handle_send()
+            return
+        if path == "/api/model":
+            self._handle_model_set()
+            return
+        if path == "/api/cmd/stage":
+            self._handle_cmd_stage()
+            return
+        if path == "/api/cmd/confirm":
+            self._handle_cmd_confirm()
+            return
+        if path == "/api/cmd/cancel":
+            self._handle_cmd_cancel()
             return
         self._send_json(404, {"error": "not_found"})
 
@@ -288,6 +303,40 @@ class _Handler(BaseHTTPRequestHandler):
             return
         ok = self.server.state.target.switch_session(name)
         self._send_json(200 if ok else 409, {"ok": ok})
+
+    def _handle_models(self):
+        """Lists switchable models for whatever /target currently points
+        at. Claude Desktop has a fixed, known set (MODEL_NAMES) - listing
+        it costs nothing. A /target-routed app (GenericTarget) has no
+        fixed list of its own; list_models() actually opens its picker
+        and OCRs whatever's visible, the same live-read every other
+        GenericTarget model operation already does."""
+        if self._authorize() is None:
+            return
+        from tether.transport.target_resolve import active_target
+        state = self.server.state
+        target = active_target(state)
+        if target is state.target:
+            from tether.targets.claude_desktop import MODEL_NAMES
+            models = list(MODEL_NAMES)
+            current = state.target.read_status().model
+        else:
+            models = target.list_models() if hasattr(target, "list_models") else []
+            current = None
+        self._send_json(200, {"models": models, "current": current})
+
+    def _handle_model_set(self):
+        if self._authorize() is None:
+            return
+        body = self._read_json_body()
+        name = (body or {}).get("name")
+        if not name or not isinstance(name, str) or not name.strip():
+            self._send_json(400, {"error": "missing_name"})
+            return
+        from tether.transport.target_resolve import active_target
+        target = active_target(self.server.state)
+        matched = target.set_model(name.strip())
+        self._send_json(200 if matched else 409, {"model": matched})
 
     def _handle_send(self):
         """Types a message into the target app from the Mini App's own
@@ -330,6 +379,70 @@ class _Handler(BaseHTTPRequestHandler):
             return
 
         self._send_json(200, {"status": status})
+
+    def _handle_cmd_stage(self):
+        if self._authorize() is None:
+            return
+        body = self._read_json_body()
+        command = (body or {}).get("command")
+        if not command or not isinstance(command, str) or not command.strip():
+            self._send_json(400, {"error": "missing_command"})
+            return
+        self.server.state.staged_cmd = command.strip()
+        self._send_json(200, {"ok": True})
+
+    def _handle_cmd_cancel(self):
+        if self._authorize() is None:
+            return
+        self.server.state.staged_cmd = None
+        self._send_json(200, {"ok": True})
+
+    def _handle_cmd_confirm(self):
+        """Executes whatever was staged via /api/cmd/stage - the exact
+        same stage-then-confirm shape /cmd already uses over Telegram,
+        reusing execute_command (audit log + real run) so a command run
+        from either interface is identical and identically logged. Also
+        posts the result to the actual Telegram chat, not just returning
+        it here - the owner should be able to see in their own chat
+        history what ran, when, and from where, regardless of which
+        interface triggered it - a command run from the Mini App must
+        never be a silent side channel invisible from Telegram."""
+        if self._authorize() is None:
+            return
+        state = self.server.state
+        command = state.staged_cmd
+        state.staged_cmd = None
+        if command is None:
+            self._send_json(400, {"error": "nothing_staged"})
+            return
+
+        from tether.transport.cmd_exec import execute_command
+        future = asyncio.run_coroutine_threadsafe(execute_command(command), self.server.event_loop)
+        try:
+            ok, output = future.result(timeout=65)
+        except Exception:
+            log.warning("mini app: /api/cmd/confirm failed", exc_info=True)
+            self._send_json(500, {"error": "exec_failed"})
+            return
+
+        self._notify_cmd_result(command, ok, output)
+        self._send_json(200, {"ok": ok, "output": output})
+
+    def _notify_cmd_result(self, command: str, ok: bool, output: str) -> None:
+        import html
+        from tether.i18n import make_translator
+        state = self.server.state
+        _t = make_translator(state.config.settings.language)
+        key = "cmd_run_via_miniapp" if ok else "cmd_run_via_miniapp_failed"
+        text = _t(key, command=html.escape(command), output=html.escape(output))
+        try:
+            future = asyncio.run_coroutine_threadsafe(
+                self.server.bot.send_message(state.config.secrets.chat_id, text, parse_mode="HTML"),
+                self.server.event_loop,
+            )
+            future.result(timeout=10)
+        except Exception:
+            log.warning("mini app: failed to post cmd result to telegram", exc_info=True)
 
     def _handle_transcript(self):
         if self._authorize() is None:

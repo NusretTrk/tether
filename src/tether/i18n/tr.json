@@ -73,6 +73,8 @@
   "cmd_output": "<pre>{output}</pre>",
   "cmd_no_output": "Komut çalıştırıldı (çıktı yok).",
   "cmd_error": "Hata:\n<pre>{error}</pre>",
+  "cmd_run_via_miniapp": "🔧 Mini Uygulama üzerinden çalıştırıldı:\n<code>{command}</code>\n\n<pre>{output}</pre>",
+  "cmd_run_via_miniapp_failed": "🔧 Mini Uygulama üzerinden çalıştırıldı (başarısız):\n<code>{command}</code>\n\nHata:\n<pre>{output}</pre>",
   "clear_done": "Giriş kutusu temizlendi.",
   "stop_sent": "Durdurma gönderildi.",
   "language_prompt": "Bir dil seç:",

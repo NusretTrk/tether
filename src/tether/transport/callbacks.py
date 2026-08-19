@@ -336,16 +336,12 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if command is None:
                 await edit(_t("staged_cancelled"))
                 return
-            from tether.platform.cmd_audit import log_command
-            from tether.platform.shell import run_cmd
-            log_command(command)
-            try:
-                output = await run_cmd(command)
-                if len(output) > 4000:
-                    output = output[:4000] + "\n...(truncated)"
+            from tether.transport.cmd_exec import execute_command
+            ok, output = await execute_command(command)
+            if ok:
                 await edit(_t("cmd_output", output=html.escape(output)), parse_mode="HTML")
-            except Exception as e:
-                await edit(_t("cmd_error", error=html.escape(str(e))), parse_mode="HTML")
+            else:
+                await edit(_t("cmd_error", error=html.escape(output)), parse_mode="HTML")
         return
 
     # ---- recent-file fetch (from /files) ----

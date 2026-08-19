@@ -73,6 +73,8 @@
   "cmd_output": "<pre>{output}</pre>",
   "cmd_no_output": "Befehl ausgeführt (keine Ausgabe).",
   "cmd_error": "Fehler:\n<pre>{error}</pre>",
+  "cmd_run_via_miniapp": "🔧 Über Mini-App ausgeführt:\n<code>{command}</code>\n\n<pre>{output}</pre>",
+  "cmd_run_via_miniapp_failed": "🔧 Über Mini-App ausgeführt (fehlgeschlagen):\n<code>{command}</code>\n\nFehler:\n<pre>{output}</pre>",
   "clear_done": "Eingabefeld geleert.",
   "stop_sent": "Stopp gesendet.",
   "language_prompt": "Sprache wählen:",

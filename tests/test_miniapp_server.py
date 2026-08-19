@@ -46,6 +46,12 @@ class FakeTarget:
         self.status = TargetStatus(model="Sonnet", effort="high")
         self.staged_texts = []
         self.enter_presses = 0
+        self.set_model_calls = []
+
+    def set_model(self, name):
+        self.set_model_calls.append(name)
+        matches = {"sonnet": "Sonnet", "opus": "Opus", "haiku": "Haiku"}
+        return matches.get(name.lower())
 
     def list_sessions(self):
         return self.sessions
@@ -121,6 +127,7 @@ class FakeState:
     pending_send_text: str | None = None
     pending_send_message_id: int | None = None
     pending_send_since: float = 0.0
+    staged_cmd: str | None = None
 
 
 @pytest.fixture
@@ -140,7 +147,7 @@ class FakeBot:
     def __init__(self):
         self.sent = []
 
-    async def send_message(self, chat_id, text, reply_markup=None):
+    async def send_message(self, chat_id, text, reply_markup=None, parse_mode=None):
         self.sent.append(text)
         return type("M", (), {"message_id": 1})()
 
@@ -609,3 +616,134 @@ def test_send_is_deferred_when_user_is_active(send_capable_server, monkeypatch):
     assert body["status"] == "deferred"
     assert state.target.staged_texts == [], "window must not be touched while the user is active"
     assert state.deferred_text == "hello claude"
+
+
+# --- /api/models, /api/model: model switching from the Status view ---
+
+def test_models_lists_the_fixed_claude_desktop_set(running_server):
+    _, base, state = running_server
+    status, body = _request(base + "/api/models", headers={"Authorization": "tma " + valid_init_data()})
+    assert status == 200
+    assert body["models"] == ["Fable", "Opus", "Sonnet", "Haiku"]
+    assert body["current"] == "Sonnet"
+
+
+def test_model_set_switches_and_reports_the_matched_name(running_server):
+    _, base, state = running_server
+    status, body = _request(
+        base + "/api/model", method="POST",
+        headers={"Authorization": "tma " + valid_init_data()},
+        body={"name": "opus"},
+    )
+    assert status == 200
+    assert body["model"] == "Opus"
+    assert state.target.set_model_calls == ["opus"]
+
+
+def test_model_set_with_no_match_returns_409(running_server):
+    _, base, state = running_server
+    status, body = _request(
+        base + "/api/model", method="POST",
+        headers={"Authorization": "tma " + valid_init_data()},
+        body={"name": "not-a-real-model"},
+    )
+    assert status == 409
+    assert body["model"] is None
+
+
+def test_model_set_requires_a_name(running_server):
+    _, base, state = running_server
+    status, body = _request(
+        base + "/api/model", method="POST",
+        headers={"Authorization": "tma " + valid_init_data()},
+        body={},
+    )
+    assert status == 400
+    assert body["error"] == "missing_name"
+
+
+def test_models_requires_auth(running_server):
+    _, base, state = running_server
+    status, body = _request(base + "/api/models")
+    assert status == 401
+
+
+# --- /api/cmd/stage, /api/cmd/confirm, /api/cmd/cancel: reuses /cmd's
+# own stage-then-confirm shape and audit log, plus posts the result back
+# to the real Telegram chat so a command run from the Mini App is never
+# a silent side channel invisible from there. ---
+
+def test_cmd_stage_sets_staged_cmd(send_capable_server):
+    server, base, state, bot = send_capable_server
+    status, body = _request(
+        base + "/api/cmd/stage", method="POST",
+        headers={"Authorization": "tma " + valid_init_data()},
+        body={"command": "Get-Process"},
+    )
+    assert status == 200
+    assert state.staged_cmd == "Get-Process"
+
+
+def test_cmd_stage_rejects_empty_command(send_capable_server):
+    server, base, state, bot = send_capable_server
+    status, body = _request(
+        base + "/api/cmd/stage", method="POST",
+        headers={"Authorization": "tma " + valid_init_data()},
+        body={"command": "   "},
+    )
+    assert status == 400
+    assert body["error"] == "missing_command"
+    assert state.staged_cmd is None
+
+
+def test_cmd_cancel_clears_without_running_anything(send_capable_server, monkeypatch):
+    monkeypatch.setattr(
+        "tether.transport.cmd_exec.execute_command",
+        lambda cmd: (_ for _ in ()).throw(AssertionError("must not run")),
+    )
+    server, base, state, bot = send_capable_server
+    state.staged_cmd = "Get-Process"
+
+    status, body = _request(base + "/api/cmd/cancel", method="POST", headers={"Authorization": "tma " + valid_init_data()})
+
+    assert status == 200
+    assert state.staged_cmd is None
+
+
+def test_cmd_confirm_with_nothing_staged_is_rejected(send_capable_server):
+    server, base, state, bot = send_capable_server
+    status, body = _request(base + "/api/cmd/confirm", method="POST", headers={"Authorization": "tma " + valid_init_data()})
+    assert status == 400
+    assert body["error"] == "nothing_staged"
+
+
+def test_cmd_confirm_runs_the_staged_command_and_notifies_telegram(send_capable_server, monkeypatch):
+    async def fake_execute(command):
+        return True, "process list here"
+
+    monkeypatch.setattr("tether.transport.cmd_exec.execute_command", fake_execute)
+    server, base, state, bot = send_capable_server
+    state.staged_cmd = "Get-Process"
+
+    status, body = _request(base + "/api/cmd/confirm", method="POST", headers={"Authorization": "tma " + valid_init_data()})
+
+    assert status == 200
+    assert body["ok"] is True
+    assert body["output"] == "process list here"
+    assert state.staged_cmd is None
+    assert any("process list here" in m for m in bot.sent), "result must also be posted to the real Telegram chat"
+
+
+def test_cmd_confirm_failure_still_notifies_telegram_and_reports_ok_false(send_capable_server, monkeypatch):
+    async def fake_execute(command):
+        return False, "something broke"
+
+    monkeypatch.setattr("tether.transport.cmd_exec.execute_command", fake_execute)
+    server, base, state, bot = send_capable_server
+    state.staged_cmd = "bad-command"
+
+    status, body = _request(base + "/api/cmd/confirm", method="POST", headers={"Authorization": "tma " + valid_init_data()})
+
+    assert status == 200
+    assert body["ok"] is False
+    assert any("something broke" in m for m in bot.sent)

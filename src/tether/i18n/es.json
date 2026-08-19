@@ -73,6 +73,8 @@
   "cmd_output": "<pre>{output}</pre>",
   "cmd_no_output": "Comando ejecutado (sin salida).",
   "cmd_error": "Error:\n<pre>{error}</pre>",
+  "cmd_run_via_miniapp": "🔧 Ejecutado desde la Mini App:\n<code>{command}</code>\n\n<pre>{output}</pre>",
+  "cmd_run_via_miniapp_failed": "🔧 Ejecutado desde la Mini App (falló):\n<code>{command}</code>\n\nError:\n<pre>{output}</pre>",
   "clear_done": "Cuadro de entrada vaciado.",
   "stop_sent": "Detención enviada.",
   "language_prompt": "Elige un idioma:",

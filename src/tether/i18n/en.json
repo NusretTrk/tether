@@ -73,6 +73,8 @@
   "cmd_output": "<pre>{output}</pre>",
   "cmd_no_output": "Command ran (no output).",
   "cmd_error": "Error:\n<pre>{error}</pre>",
+  "cmd_run_via_miniapp": "🔧 Ran via Mini App:\n<code>{command}</code>\n\n<pre>{output}</pre>",
+  "cmd_run_via_miniapp_failed": "🔧 Ran via Mini App (failed):\n<code>{command}</code>\n\nError:\n<pre>{output}</pre>",
   "clear_done": "Input box cleared.",
   "stop_sent": "Stop sent.",
   "language_prompt": "Choose a language:",
