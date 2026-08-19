@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import functools
+import hmac
 import html
 import io
 import logging
@@ -36,13 +37,38 @@ def _project_root(state):
     return read_project_cwd(transcript)
 
 
+# Commands that must reach their handler even while locked - otherwise
+# there's no way to unlock at all, and /start would look broken.
+_UNLOCK_EXEMPT_PREFIXES = ("/start", "/unlock", "/help")
+
+
+def _is_unlock_exempt(update: Update) -> bool:
+    text = getattr(getattr(update, "message", None), "text", None) or ""
+    return text.startswith(_UNLOCK_EXEMPT_PREFIXES)
+
+
+async def _reply_locked(update: Update, _t) -> None:
+    if getattr(update, "message", None) is not None:
+        await update.message.reply_text(_t("bot_locked"))
+    elif getattr(update, "callback_query", None) is not None:
+        await update.callback_query.answer(_t("bot_locked"), show_alert=True)
+
+
 def restricted(handler):
     """Drops anything not from the configured chat id.
 
     Deliberately silent: replying would confirm to a stranger that the bot
     is live and configured, and would let anyone trigger unlimited outbound
     messages by spamming it (burning the account's rate limit, or worse).
-    Unauthorized attempts are logged locally instead."""
+    Unauthorized attempts are logged locally instead.
+
+    If BOT_PASSWORD is set, an already-authorized-but-locked chat is also
+    stopped here (only after the chat-id check - only a verified chat
+    should ever be told the bot exists at all). Locked replies openly
+    rather than staying silent, since the sender is already the real
+    owner as far as Telegram is concerned; the password is a second
+    factor against their Telegram account itself being compromised, not
+    a second layer of "hide that this bot exists"."""
     @functools.wraps(handler)
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
         state = context.bot_data["state"]
@@ -52,6 +78,14 @@ def restricted(handler):
                 "ignored update from unauthorized chat id %s",
                 chat.id if chat else "unknown",
             )
+            return
+        # getattr, not direct access: plenty of test doubles for `state`
+        # predate this field and don't set it, and treating "not present"
+        # the same as "not configured" is the correct behavior anyway.
+        password = getattr(state.config.secrets, "bot_password", None)
+        if password and not getattr(state, "unlocked", False) and not _is_unlock_exempt(update):
+            _t = make_translator(state.config.settings.language)
+            await _reply_locked(update, _t)
             return
         return await handler(update, context)
     return wrapper
@@ -72,6 +106,44 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     _, _t = _ctx(context)
     await update.message.reply_text(_t("help_text"))
+
+
+@restricted
+async def cmd_unlock(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Second factor on top of the chat-id gate - see restricted()'s
+    docstring for why chat-id alone isn't enough. Attempts are capped
+    (monitors/lockout.py) so a compromised Telegram account can't just
+    brute-force a weak password."""
+    state, _t = _ctx(context)
+    password = state.config.secrets.bot_password
+    if not password:
+        await update.message.reply_text(_t("unlock_not_needed"))
+        return
+
+    now = time.monotonic()
+    if state.unlock_lockout.is_locked_out(now):
+        await update.message.reply_text(_t("unlock_locked_out"))
+        return
+
+    given = " ".join(context.args)
+    if not hmac.compare_digest(given, password):
+        state.unlock_lockout.record_failure(now)
+        await update.message.reply_text(_t("unlock_wrong_password"))
+        return
+
+    state.unlock_lockout.reset()
+    state.unlocked = True
+    await update.message.reply_text(_t("unlock_success"))
+
+
+@restricted
+async def cmd_lock(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    state, _t = _ctx(context)
+    if not state.config.secrets.bot_password:
+        await update.message.reply_text(_t("unlock_not_needed"))
+        return
+    state.unlocked = False
+    await update.message.reply_text(_t("locked_now"))
 
 
 @restricted

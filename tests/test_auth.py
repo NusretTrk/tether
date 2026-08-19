@@ -34,6 +34,7 @@ class FakeUpdate:
 
 class FakeSecrets:
     chat_id = ALLOWED_CHAT_ID
+    bot_password = None
 
 
 class FakeSettings:
@@ -47,6 +48,7 @@ class FakeConfig:
 
 class FakeState:
     config = FakeConfig()
+    unlocked = False
 
 
 class FakeContext:
@@ -57,6 +59,20 @@ class FakeContext:
 def _run(handler, chat_id):
     update = FakeUpdate(chat_id)
     asyncio.run(handler(update, FakeContext()))
+    return update
+
+
+def _run_with_text(handler, chat_id, text, password, unlocked, monkeypatch):
+    """Uses monkeypatch (not direct mutation) for bot_password - FakeSecrets
+    is a single shared class-level instance across every test in this file
+    (same as chat_id above), and a raw mutation would leak into whichever
+    test runs next."""
+    monkeypatch.setattr(FakeSecrets, "bot_password", password)
+    update = FakeUpdate(chat_id)
+    update.message.text = text
+    context = FakeContext()
+    context.bot_data["state"].unlocked = unlocked
+    asyncio.run(handler(update, context))
     return update
 
 
@@ -112,3 +128,64 @@ def test_handler_return_value_passed_through_for_allowed():
 
     update = FakeUpdate(ALLOWED_CHAT_ID)
     assert asyncio.run(handler(update, FakeContext())) == "result"
+
+
+# --- BOT_PASSWORD lock gate ---------------------------------------------
+
+def test_no_password_set_never_locks(monkeypatch):
+    called = []
+
+    @restricted
+    async def handler(update, context):
+        called.append(True)
+
+    _run_with_text(handler, ALLOWED_CHAT_ID, "/anything", password=None, unlocked=False, monkeypatch=monkeypatch)
+    assert called == [True]
+
+
+def test_password_set_and_locked_blocks_the_handler(monkeypatch):
+    called = []
+
+    @restricted
+    async def handler(update, context):
+        called.append(True)
+
+    update = _run_with_text(handler, ALLOWED_CHAT_ID, "/status", password="hunter2", unlocked=False, monkeypatch=monkeypatch)
+    assert called == [], "handler ran despite the bot being locked"
+    assert update.message.replies, "locked chat should be told, not silently dropped"
+
+
+def test_password_set_and_unlocked_reaches_the_handler(monkeypatch):
+    called = []
+
+    @restricted
+    async def handler(update, context):
+        called.append(True)
+
+    _run_with_text(handler, ALLOWED_CHAT_ID, "/status", password="hunter2", unlocked=True, monkeypatch=monkeypatch)
+    assert called == [True]
+
+
+@pytest.mark.parametrize("text", ["/start", "/unlock hunter2", "/help"])
+def test_exempt_commands_reach_the_handler_while_locked(monkeypatch, text):
+    called = []
+
+    @restricted
+    async def handler(update, context):
+        called.append(True)
+
+    _run_with_text(handler, ALLOWED_CHAT_ID, text, password="hunter2", unlocked=False, monkeypatch=monkeypatch)
+    assert called == [True], f"{text!r} should reach its handler even while locked"
+
+
+def test_stranger_still_blocked_even_with_no_password(monkeypatch):
+    """The chat-id gate is independent of the password gate - a stranger
+    must never reach a handler regardless of BOT_PASSWORD."""
+    called = []
+
+    @restricted
+    async def handler(update, context):
+        called.append(True)
+
+    _run_with_text(handler, STRANGER_CHAT_ID, "/status", password=None, unlocked=False, monkeypatch=monkeypatch)
+    assert called == []

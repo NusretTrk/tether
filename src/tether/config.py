@@ -35,6 +35,12 @@ class Secrets:
     chat_id: int
     claude_projects_dir: str | None = None
     elevenlabs_api_key: str | None = None
+    # Optional second factor on top of the chat-id gate. Chat-id alone only
+    # protects against a stranger who finds the bot - it does nothing if the
+    # owner's own Telegram account gets compromised, since the attacker
+    # would then genuinely be messaging from the authorized chat id. Unset
+    # by default (opt-in, not required).
+    bot_password: str | None = None
 
     @staticmethod
     def load() -> "Secrets":
@@ -62,6 +68,7 @@ class Secrets:
             chat_id=chat_id,
             claude_projects_dir=os.environ.get("CLAUDE_PROJECTS_DIR") or None,
             elevenlabs_api_key=os.environ.get("ELEVENLABS_API_KEY") or None,
+            bot_password=os.environ.get("BOT_PASSWORD") or None,
         )
 
 
@@ -105,6 +112,12 @@ class Settings:
     remote_file_extensions: list[str] = field(default_factory=lambda: [".md"])
     remote_file_list_limit: int = 15
     remote_file_max_bytes: int = 20_000_000
+
+    # Caps repeated /unlock guesses (see monitors/lockout.py) - only
+    # relevant when BOT_PASSWORD is set. Same rolling-window shape as the
+    # recovery/continue attempt caps elsewhere.
+    unlock_max_attempts: int = 5
+    unlock_attempt_window_sec: int = 300
 
     stream_edit_throttle_sec: float = 2.5
     transcript_poll_interval_sec: float = 1.0

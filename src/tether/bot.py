@@ -24,6 +24,8 @@ log = logging.getLogger(__name__)
 
 BOT_COMMANDS = [
     BotCommand("start", "Show the keyboard"),
+    BotCommand("unlock", "Unlock the bot (if a password is set)"),
+    BotCommand("lock", "Re-lock the bot"),
     BotCommand("menu", "Full command menu"),
     BotCommand("sessions", "List and switch sessions"),
     BotCommand("screen", "Screenshot a window"),
@@ -61,6 +63,8 @@ def _build_app(config: Config) -> Application:
 
     app.add_handler(CommandHandler("start", handlers.cmd_start))
     app.add_handler(CommandHandler("help", handlers.cmd_help))
+    app.add_handler(CommandHandler("unlock", handlers.cmd_unlock))
+    app.add_handler(CommandHandler("lock", handlers.cmd_lock))
     app.add_handler(CommandHandler("menu", handlers.cmd_menu))
     app.add_handler(CommandHandler("sessions", handlers.cmd_sessions))
     app.add_handler(CommandHandler(["screen", "screenshot"], handlers.cmd_screen))

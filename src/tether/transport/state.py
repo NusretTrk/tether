@@ -10,6 +10,7 @@ from tether.config import Config
 from tether.events import Event
 from tether.monitors.activity import ActivityWatcher
 from tether.monitors.dialogs import DialogWatcher
+from tether.monitors.lockout import LockoutDecider, LockoutPolicy
 from tether.monitors.recovery import RecoveryDecider, RecoveryPolicy
 from tether.monitors.usage_limit import ContinueDecider, ContinuePolicy
 from tether.sources.transcript import TranscriptTailer
@@ -49,6 +50,12 @@ class AppState:
     # Last /files listing, indexed by the inline keyboard's callback_data
     # (a full path doesn't fit in Telegram's 64-byte callback_data limit).
     recent_files: list[Path] = field(default_factory=list)
+
+    # Only meaningful when config.secrets.bot_password is set. Always False
+    # on a fresh process start - a restart re-locks, same as any other auth
+    # session expiring rather than persisting silently.
+    unlocked: bool = False
+    unlock_lockout: LockoutDecider = field(default_factory=lambda: LockoutDecider(LockoutPolicy()))
 
     # error signature -> monotonic time last forwarded to Telegram,
     # so a repeating fault doesn't flood the chat (see error_handler).
@@ -114,5 +121,9 @@ class AppState:
                 post_reset_delay_sec=config.settings.usage_limit_continue_delay_sec,
                 max_attempts=config.settings.usage_limit_continue_max_attempts,
                 attempt_window_sec=config.settings.usage_limit_continue_attempt_window_sec,
+            )),
+            unlock_lockout=LockoutDecider(LockoutPolicy(
+                max_attempts=config.settings.unlock_max_attempts,
+                window_sec=config.settings.unlock_attempt_window_sec,
             )),
         )
