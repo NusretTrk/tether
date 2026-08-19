@@ -37,14 +37,22 @@ forgotten — if it's not done, it's below with a reason.
   unverified on real hardware, developed on Windows only
 - Idle backoff — UIA polling (session list, dialogs) skips entirely once
   the app is confirmed not running, instead of polling every 3s regardless
+- Watchdog for tether itself — `watchdog.py` relaunches it if the process
+  ever disappears, crash or Task Manager close, deliberate or not.
+  `stop_tether`/`start_tether` scripts control both by hand. Confirmed
+  live: killed the running process, watched the watchdog bring it back
+  within seconds
+- `/cmd` confirmation step (it was the one destructive command with none)
+  plus a dedicated execution audit log, and a real bug fix found along the
+  way — command output was never actually HTML-escaped despite a test file
+  claiming it was, because that test only covered a standalone helper and
+  never the real code path
 
 ## Next (reliability)
 
-1. **Watchdog for tether itself** — nothing notices if the bot process
-   dies. Last remaining single point of failure.
-2. **Crash-safe state** — `pending_send`, staged photos, and pending
+1. **Crash-safe state** — `pending_send`, staged photos, and pending
    `ask()` all live in memory; a restart mid-flow loses them.
-3. **Real macOS/Linux verification** — the window control code is written
+2. **Real macOS/Linux verification** — the window control code is written
    against documented syntax, never run on real hardware. Needs someone
    with a Mac or Linux box to actually try it and report what breaks.
 

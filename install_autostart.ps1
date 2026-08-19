@@ -13,7 +13,7 @@ $ErrorActionPreference = "Stop"
 $startup      = [Environment]::GetFolderPath("Startup")
 $shortcutPath = Join-Path $startup "tether.lnk"
 $projectDir   = Split-Path -Parent $MyInvocation.MyCommand.Path
-$runScript    = Join-Path $projectDir "run.py"
+$watchdogPy   = Join-Path $projectDir "watchdog.py"
 
 if ($Remove) {
     if (Test-Path $shortcutPath) {
@@ -25,8 +25,8 @@ if ($Remove) {
     exit 0
 }
 
-if (-not (Test-Path $runScript)) {
-    Write-Error "Can't find run.py next to this script (looked in $projectDir)."
+if (-not (Test-Path $watchdogPy)) {
+    Write-Error "Can't find watchdog.py next to this script (looked in $projectDir)."
 }
 
 # pythonw.exe runs without opening a console window.
@@ -41,13 +41,15 @@ if (-not $pythonw) {
 $shell    = New-Object -ComObject WScript.Shell
 $shortcut = $shell.CreateShortcut($shortcutPath)
 $shortcut.TargetPath       = $pythonw
-$shortcut.Arguments        = "`"$runScript`""
+$shortcut.Arguments        = "`"$watchdogPy`""
 $shortcut.WorkingDirectory = $projectDir
-$shortcut.Description      = "tether - Telegram remote control"
+$shortcut.Description      = "tether - Telegram remote control (via watchdog)"
 $shortcut.Save()
 
-Write-Host "Installed. tether will start automatically when you log in."
+Write-Host "Installed. tether will start automatically when you log in, and the"
+Write-Host "watchdog will relaunch it if it ever stops unexpectedly (or is closed"
+Write-Host "from Task Manager) - use stop_tether.ps1 to actually stop it for good."
 Write-Host "Shortcut: $shortcutPath"
 Write-Host ""
 Write-Host "To start it right now without rebooting:"
-Write-Host "  python run.py"
+Write-Host "  powershell -ExecutionPolicy Bypass -File start_tether.ps1"

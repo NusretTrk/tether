@@ -92,7 +92,8 @@ powershell -ExecutionPolicy Bypass -File install_autostart.ps1
 
 This drops a shortcut in your personal Startup folder pointing at
 `pythonw.exe` (the windowless Python), so tether starts silently at login
-with no console window.
+with no console window. It launches `watchdog.py` rather than `run.py`
+directly — see the next section for what that buys you.
 
 **No administrator rights required.** This is deliberate — the obvious
 alternative, a Task Scheduler entry, needs elevation on most machines and
@@ -104,6 +105,29 @@ To undo:
 ```bash
 powershell -ExecutionPolicy Bypass -File install_autostart.ps1 -Remove
 ```
+
+## Stopping and starting manually
+
+```
+stop_tether.bat
+start_tether.bat
+```
+
+(or the `.ps1` files directly, same as above). `stop_tether` kills both
+tether and its watchdog, so it actually stays stopped rather than coming
+back on the watchdog's next check. `start_tether` is safe to run even if
+tether is already up — it checks first instead of spawning a duplicate.
+
+**The watchdog.** `start_tether.bat` and the autostart shortcut both launch
+`watchdog.py`, not `run.py` directly. It checks every 30 seconds whether
+tether is still running and relaunches it if not — unconditionally,
+whether it crashed or got closed from Task Manager, deliberately or by
+accident. There's no way for the watchdog to tell those apart (unlike
+`/restart`'s own recovery logic, which uses idle time as a signal for "the
+person at the keyboard probably meant to do that" — the watchdog has no
+equivalent signal about its own process disappearing). If you want tether
+off for a while, use `stop_tether.bat`, not Task Manager — Task Manager
+alone just gets it relaunched within half a minute.
 
 ---
 

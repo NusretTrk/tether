@@ -130,6 +130,10 @@ Message your bot `/start` and you're going.
 install_autostart.bat
 ```
 
+This runs tether behind a small watchdog that relaunches it if it ever
+stops unexpectedly — crash or a Task Manager close, deliberate or not.
+`stop_tether.bat` / `start_tether.bat` control both by hand, anytime.
+
 Full instructions, including building a standalone `.exe` and registering
 the MCP server: [docs/SETUP.md](docs/SETUP.md).
 
