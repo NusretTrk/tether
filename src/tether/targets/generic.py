@@ -21,6 +21,26 @@ instead, where it ran as a shell command. So "let the fallback ride" is
 only really safe for something that's the sole input in its window (a
 dedicated terminal app); anything with more than one panel should get an
 input_click configured, not just multi-panel apps where it "seems" needed.
+
+A second live-testing lesson, easy to miss: don't calibrate input_click
+(or model_click, below) against an empty panel. Both Antigravity and
+Cursor put the input box right under the panel title when there's no
+conversation yet, then re-anchor it to the BOTTOM of the panel once a
+real conversation exists - ordinary chat-UI behavior, but a coordinate
+captured from the empty state silently breaks the moment there's any
+history, which is true almost all the time in practice. Confirmed by
+directly hitting this: config.example.yaml's first antigravity
+input_click (set while the panel was still empty) stopped landing
+messages correctly as soon as one real exchange had happened.
+
+model_click (also a window-relative x/y, also set per profile) opens
+the app's model picker and OCR-matches the requested name against
+whatever text is visible, the same way list_models()/set_model() work
+below. It isn't universal even where the panel itself works fine:
+Cursor's picker is paywalled on a free-tier account ("Upgrade to unlock
+premium models") - clicking it pops an upsell, not a model list, so
+there's nothing tether can do there short of an actual subscription.
+Antigravity's opened a real, selectable list every time.
 """
 from __future__ import annotations
 
@@ -39,23 +59,31 @@ from tether.targets.base import PasteResult
 class GenericTarget:
     name = "generic"
 
-    def __init__(self, window_keyword: str, preserve_user_clipboard: bool = True, input_click: tuple[float, float] | None = None):
+    def __init__(
+        self, window_keyword: str, preserve_user_clipboard: bool = True,
+        input_click: tuple[float, float] | None = None,
+        model_click: tuple[float, float] | None = None,
+    ):
         self.window_keyword = window_keyword
         self.preserve_user_clipboard = preserve_user_clipboard
         self.input_click = input_click  # (x_pct, y_pct) of window width/height, or None
+        self.model_click = model_click  # (x_pct, y_pct) of the model-picker button, or None
 
     def _hwnd(self):
         return find_window_by_keyword(self.window_keyword)
 
-    def _click_input(self, hwnd) -> None:
-        if self.input_click is None:
-            return
+    def _click_at(self, hwnd, pct: tuple[float, float]) -> None:
         left, top, right, bottom = get_window_rect(hwnd)
-        x_pct, y_pct = self.input_click
+        x_pct, y_pct = pct
         x = left + int((right - left) * x_pct)
         y = top + int((bottom - top) * y_pct)
         pyautogui.click(x, y)
         time.sleep(0.15)
+
+    def _click_input(self, hwnd) -> None:
+        if self.input_click is None:
+            return
+        self._click_at(hwnd, self.input_click)
 
     def is_available(self) -> bool:
         return self._hwnd() is not None
@@ -124,3 +152,52 @@ class GenericTarget:
     def screenshot(self):
         hwnd = self._hwnd()
         return capture_window(hwnd) if hwnd else None
+
+    def list_models(self) -> list[str]:
+        """Opens the model picker (model_click required) and OCRs whatever
+        text lines appear, closing the dropdown again with Escape before
+        returning. Unlike ClaudeDesktopTarget there's no fixed known model
+        list to validate against here - the dropdown itself is the source
+        of truth, since every app names its models differently and that
+        list can change without tether knowing."""
+        hwnd = self._hwnd()
+        if not hwnd or self.model_click is None:
+            return []
+        if not focus_window(hwnd):
+            return []
+        self._click_at(hwnd, self.model_click)
+        time.sleep(0.2)
+        from tether.platform.ocr import ocr_lines
+        img = capture_window(hwnd)
+        lines = [text for text, *_ in ocr_lines(img) if text.strip()]
+        pyautogui.press("escape")
+        return lines
+
+    def set_model(self, name: str) -> str | None:
+        """Opens the model picker, OCR-searches the visible lines for one
+        containing `name` (case-insensitive), and clicks its center.
+        Returns the matched line's exact text, or None if nothing matched
+        - the dropdown is closed via Escape either way, so a failed
+        attempt never leaves it hanging open."""
+        hwnd = self._hwnd()
+        if not hwnd or self.model_click is None:
+            return None
+        if not focus_window(hwnd):
+            return None
+        self._click_at(hwnd, self.model_click)
+        time.sleep(0.2)
+        from tether.platform.ocr import ocr_lines
+        img = capture_window(hwnd)
+        match = None
+        for text, left, top, right, bottom in ocr_lines(img):
+            if name.lower() in text.lower():
+                match = (text, left, top, right, bottom)
+                break
+        if match is None:
+            pyautogui.press("escape")
+            return None
+        text, left, top, right, bottom = match
+        win_left, win_top, _, _ = get_window_rect(hwnd)
+        pyautogui.click(win_left + (left + right) // 2, win_top + (top + bottom) // 2)
+        time.sleep(0.3)
+        return text

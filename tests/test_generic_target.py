@@ -6,6 +6,7 @@ covered by their own tests) to check GenericTarget wires them correctly:
 window-not-found and focus-failed both refuse cleanly rather than pasting
 into whatever happens to be focused.
 """
+from tether.platform import ocr as ocr_mod
 from tether.targets import generic as generic_mod
 from tether.targets.generic import GenericTarget
 
@@ -124,9 +125,90 @@ def test_input_click_also_applies_to_press_enter(monkeypatch):
     monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
     monkeypatch.setattr(generic_mod, "focus_window", lambda hwnd: True)
     monkeypatch.setattr(generic_mod, "get_window_rect", lambda hwnd: (0, 0, 1000, 1000))
+    monkeypatch.setattr(generic_mod, "capture_window", lambda hwnd: None)
     monkeypatch.setattr(generic_mod.pyautogui, "press", lambda key: None)
     clicks = []
     monkeypatch.setattr(generic_mod.pyautogui, "click", lambda x, y: clicks.append((x, y)))
     t = GenericTarget("Cursor", input_click=(0.5, 0.5))
     t.press_enter()
     assert clicks == [(500, 500)]
+
+
+# --- model switching -------------------------------------------------
+# Confirmed live against a real Antigravity model dropdown: clicking the
+# model button opens a genuine list (Gemini 3.7/3.6/3.5 Flash, Gemini 3.1
+# Pro, Claude Sonnet/Opus 4.6, GPT-OSS 120B) - the same OCR-text-match-and-
+# click approach ClaudeDesktopTarget already uses for Claude's own model
+# dropdown applies here too, just against a dynamic (not fixed) list.
+
+def test_list_models_returns_empty_without_model_click_configured(monkeypatch):
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
+    t = GenericTarget("Antigravity")  # no model_click
+    assert t.list_models() == []
+
+
+def test_list_models_opens_dropdown_ocrs_and_closes_it(monkeypatch):
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
+    monkeypatch.setattr(generic_mod, "focus_window", lambda hwnd: True)
+    monkeypatch.setattr(generic_mod, "get_window_rect", lambda hwnd: (0, 0, 1000, 1000))
+    monkeypatch.setattr(generic_mod, "capture_window", lambda hwnd: None)
+    clicks = []
+    monkeypatch.setattr(generic_mod.pyautogui, "click", lambda x, y: clicks.append((x, y)))
+    presses = []
+    monkeypatch.setattr(generic_mod.pyautogui, "press", lambda key: presses.append(key))
+    monkeypatch.setattr(ocr_mod, "ocr_lines", lambda img: [
+        ("Gemini 3.5 Flash", 10, 10, 100, 30), ("Gemini 3.1 Pro", 10, 40, 100, 60),
+    ])
+    t = GenericTarget("Antigravity", model_click=(0.9, 0.4))
+    result = t.list_models()
+    assert result == ["Gemini 3.5 Flash", "Gemini 3.1 Pro"]
+    assert clicks == [(900, 400)]  # opened the picker
+    assert presses == ["escape"]   # closed it again
+
+
+def test_set_model_clicks_the_matching_line(monkeypatch):
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
+    monkeypatch.setattr(generic_mod, "focus_window", lambda hwnd: True)
+    monkeypatch.setattr(generic_mod, "get_window_rect", lambda hwnd: (0, 0, 1000, 1000))
+    monkeypatch.setattr(generic_mod, "capture_window", lambda hwnd: None)
+    clicks = []
+    monkeypatch.setattr(generic_mod.pyautogui, "click", lambda x, y: clicks.append((x, y)))
+    monkeypatch.setattr(ocr_mod, "ocr_lines", lambda img: [
+        ("Gemini 3.5 Flash Medium Fast", 10, 10, 110, 30),
+        ("Gemini 3.1 Pro Low", 10, 40, 90, 60),
+    ])
+    t = GenericTarget("Antigravity", model_click=(0.9, 0.4))
+    result = t.set_model("3.1 Pro")
+    assert result == "Gemini 3.1 Pro Low"
+    assert clicks == [(900, 400), ((10 + 90) // 2, (40 + 60) // 2)]
+
+
+def test_set_model_is_case_insensitive_substring_match(monkeypatch):
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
+    monkeypatch.setattr(generic_mod, "focus_window", lambda hwnd: True)
+    monkeypatch.setattr(generic_mod, "get_window_rect", lambda hwnd: (0, 0, 1000, 1000))
+    monkeypatch.setattr(generic_mod, "capture_window", lambda hwnd: None)
+    monkeypatch.setattr(generic_mod.pyautogui, "click", lambda x, y: None)
+    monkeypatch.setattr(ocr_mod, "ocr_lines", lambda img: [("Claude Opus 4.6", 0, 0, 50, 20)])
+    t = GenericTarget("Antigravity", model_click=(0.9, 0.4))
+    assert t.set_model("opus") == "Claude Opus 4.6"
+
+
+def test_set_model_no_match_closes_dropdown_and_returns_none(monkeypatch):
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
+    monkeypatch.setattr(generic_mod, "focus_window", lambda hwnd: True)
+    monkeypatch.setattr(generic_mod, "get_window_rect", lambda hwnd: (0, 0, 1000, 1000))
+    monkeypatch.setattr(generic_mod, "capture_window", lambda hwnd: None)
+    monkeypatch.setattr(generic_mod.pyautogui, "click", lambda x, y: None)
+    presses = []
+    monkeypatch.setattr(generic_mod.pyautogui, "press", lambda key: presses.append(key))
+    monkeypatch.setattr(ocr_mod, "ocr_lines", lambda img: [("Gemini 3.5 Flash", 0, 0, 50, 20)])
+    t = GenericTarget("Antigravity", model_click=(0.9, 0.4))
+    assert t.set_model("gpt-oss") is None
+    assert "escape" in presses
+
+
+def test_set_model_without_model_click_returns_none(monkeypatch):
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
+    t = GenericTarget("Antigravity")  # no model_click
+    assert t.set_model("anything") is None

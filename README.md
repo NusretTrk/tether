@@ -53,16 +53,21 @@ is actually running on that OS — on Windows they sit on disk, unread.
   compare.
 - **Route messages elsewhere with `/target`** — plain text can go to Cursor,
   Antigravity, a terminal, or anything with a window, not just Claude
-  Desktop. Reuses the same named profiles `/keys` already uses. Lower
-  fidelity than the Claude Desktop path on purpose (see below), but
-  confirmed actually working — sent real messages into both a live
-  Antigravity and a live Cursor window and got real replies back while
-  building it, not just assumed. That testing also caught a real bug:
-  Cursor doesn't reliably keep its chat panel focused — after clicking
-  its terminal for an unrelated check, the next message sent that way
-  landed in the terminal and ran as a command instead. Fixed by clicking
-  the right panel before every paste (`input_click` in a profile), which
-  the example config now sets for both.
+  Desktop; `/model` follows it there too, switching whatever app is
+  currently targeted instead of always meaning Claude's model. Reuses the
+  same named profiles `/keys` already uses. Lower fidelity than the Claude
+  Desktop path on purpose (see below), but confirmed actually working —
+  sent real messages into both a live Antigravity and a live Cursor
+  window and got real replies back, and switched Antigravity's model
+  live and back again, not just assumed any of it. That testing caught
+  two real things worth knowing: Cursor doesn't reliably keep its chat
+  panel focused (a message can land in its terminal and run as a command
+  instead — fixed with a click before every paste), and both apps anchor
+  their input box to the bottom of the panel once there's a real
+  conversation, not wherever it sits on an empty one — so a coordinate
+  calibrated against a fresh panel quietly stops working. Cursor's model
+  picker also turned out to be paywalled on a free account; Antigravity's
+  wasn't.
 - **Fetch a file with `/files` and `/file`** — the agent writes a `.md`
   file mid-session and you're not at the machine to read it. `/files`
   lists recent ones as tap-to-fetch buttons; `/file <path>` grabs one

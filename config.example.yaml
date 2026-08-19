@@ -58,16 +58,34 @@ activity_watch_enabled: true    # notify when a Running session goes Idle
 # Only skip input_click for something that's ALWAYS the sole input in its
 # window, like a dedicated terminal app with nothing else in it.
 #
+# IMPORTANT if you calibrate these yourself: use a window with an ACTUAL
+# conversation in it, not a fresh empty panel. Both Cursor and Antigravity
+# put the input box right below the panel title when there's no history
+# yet, then anchor it to the BOTTOM of the panel once there's a real
+# conversation - completely normal chat-UI behavior, but it means a
+# coordinate captured against an empty panel silently stops working the
+# moment a real conversation exists, which is most of the time in
+# practice. The values below were captured with a live conversation
+# already in progress, for exactly this reason.
+#
+# model_click works the same way (window-relative x/y) for the /model
+# picker button - opens it, OCRs the visible option text, clicks whichever
+# line matches your /model argument. Only worth setting where the picker
+# is actually usable: confirmed live that Cursor's is paywalled ("Upgrade
+# to unlock premium models" on a free-tier account) - clicking it just
+# pops an upsell, not a model list, so there's no model_click for cursor
+# below. Antigravity's opened a real list every time.
+#
 # Uncomment and adjust to match your setup:
 #
 # keypad_profiles:
 #   cursor:
 #     window_keyword: "Cursor"
-#     # Verified live: the Agent chat panel sits at roughly this position
-#     # in a normally-docked, normally-sized Cursor window.
+#     # Verified live, WITH a conversation already in the panel (see the
+#     # note above on why that matters).
 #     input_click:
-#       x: 0.88
-#       y: 0.10
+#       x: 0.878
+#       y: 0.910
 #     keys:
 #       Accept: tab
 #       Reject: escape
@@ -84,12 +102,16 @@ activity_watch_enabled: true    # notify when a Running session goes Idle
 #       Down: down
 #   antigravity:
 #     window_keyword: "Antigravity"
-#     # Verified live: the Agent chat panel sits at roughly this position
-#     # in a normally-docked, normally-sized Antigravity window. Adjust if
-#     # yours is laid out differently (panel moved, window resized oddly).
+#     # Verified live, WITH a conversation already in the panel.
 #     input_click:
-#       x: 0.92
-#       y: 0.42
+#       x: 0.919
+#       y: 0.910
+#     # Verified live: opens a real model list (Gemini 3.7/3.6/3.5 Flash,
+#     # Gemini 3.1 Pro, Claude Sonnet/Opus 4.6, GPT-OSS 120B were all seen
+#     # on this account) and /model <partial name> correctly switches it.
+#     model_click:
+#       x: 0.9014
+#       y: 0.943
 #     keys:
 #       Accept: tab
 #       Reject: escape

@@ -17,6 +17,7 @@ from tether.i18n import make_translator
 from tether.monitors.temps import get_cpu_temp, get_gpu_temp
 from tether.platform.capabilities import CAPABILITIES
 from tether.transport import menus
+from tether.transport.target_resolve import active_target
 
 
 def _fmt_minutes(minutes: float) -> str:
@@ -260,8 +261,30 @@ async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 @restricted
 async def cmd_model(update: Update, context: ContextTypes.DEFAULT_TYPE):
     state, _t = _ctx(context)
-    from tether.targets.claude_desktop import MODEL_NAMES
+    target = active_target(state)
     target_name = " ".join(context.args).strip()
+
+    if target is not state.target:
+        # A /target-routed app - no fixed known model list the way Claude
+        # Desktop has one, the dropdown itself is asked live via OCR.
+        if getattr(target, "model_click", None) is None:
+            await update.message.reply_text(_t("model_not_configured"))
+            return
+        if not target_name:
+            models = await asyncio.to_thread(target.list_models)
+            if not models:
+                await update.message.reply_text(_t("model_list_failed"))
+                return
+            await update.message.reply_text(_t("model_list", options="\n".join(models)))
+            return
+        result = await asyncio.to_thread(target.set_model, target_name)
+        if result:
+            await update.message.reply_text(_t("model_set", model=result))
+        else:
+            await update.message.reply_text(_t("model_generic_unknown", target=target_name))
+        return
+
+    from tether.targets.claude_desktop import MODEL_NAMES
     if not target_name:
         status = await asyncio.to_thread(state.target.read_status)
         await update.message.reply_text(
