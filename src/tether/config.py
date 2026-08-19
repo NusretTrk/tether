@@ -41,6 +41,10 @@ class Secrets:
     # would then genuinely be messaging from the authorized chat id. Unset
     # by default (opt-in, not required).
     bot_password: str | None = None
+    # Only read when mini_app_enabled is on. Never passed on any command
+    # line (visible via Task Manager/ps) - handed to the ngrok subprocess
+    # through its own environment instead. See miniapp/runner.py.
+    ngrok_authtoken: str | None = None
 
     @staticmethod
     def load() -> "Secrets":
@@ -69,6 +73,7 @@ class Secrets:
             claude_projects_dir=os.environ.get("CLAUDE_PROJECTS_DIR") or None,
             elevenlabs_api_key=os.environ.get("ELEVENLABS_API_KEY") or None,
             bot_password=os.environ.get("BOT_PASSWORD") or None,
+            ngrok_authtoken=os.environ.get("NGROK_AUTHTOKEN") or None,
         )
 
 
@@ -185,6 +190,22 @@ class Settings:
     keypad_profiles: dict[str, dict] = field(default_factory=dict)
     activity_watch_enabled: bool = True
 
+    # Telegram Mini App - off by default, since it needs a one-time
+    # per-user ngrok setup (free static domain) that most people won't
+    # have done. When on, the chat's menu button switches from the
+    # regular command menu to opening the Mini App; when off, nothing
+    # about the bot changes from today. See miniapp/ for the server,
+    # auth, and tunnel-management code, and SETUP.md for the one-time
+    # setup steps this depends on.
+    mini_app_enabled: bool = False
+    mini_app_local_port: int = 8743
+    # e.g. "yourname.ngrok-free.app" - claimed once, free, in the ngrok
+    # dashboard. Left empty until the user sets it; mini_app_enabled is
+    # forced back off if it's still empty (see validate() below).
+    mini_app_ngrok_domain: str = ""
+    # Assumes ngrok is on PATH; override with a full path if not.
+    mini_app_ngrok_path: str = "ngrok"
+
     def validate(self) -> list[str]:
         """Returns a list of problems found (empty = all good). Does not raise —
         callers decide whether to fall back per-field or reject the whole file."""
@@ -199,6 +220,8 @@ class Settings:
             problems.append(f"stream_edit_throttle_sec={self.stream_edit_throttle_sec!r} too low (Telegram rate limits)")
         if self.transcript_poll_interval_sec <= 0:
             problems.append(f"transcript_poll_interval_sec={self.transcript_poll_interval_sec!r} must be positive")
+        if self.mini_app_enabled and not self.mini_app_ngrok_domain.strip():
+            problems.append("mini_app_enabled=True but mini_app_ngrok_domain is empty")
         return problems
 
     @staticmethod

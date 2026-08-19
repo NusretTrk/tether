@@ -68,3 +68,38 @@ class TranscriptTailer:
                 continue
             events.extend(self._parse_line(obj))
         return events
+
+
+def read_recent_events(
+    path: Path, limit: int = 50, parse_line: Callable[[dict], list[Event]] = parse_line, max_bytes: int = 300_000,
+) -> list[Event]:
+    """Read-only snapshot of the last `limit` events, for the Mini App's
+    transcript view. Deliberately independent of TranscriptTailer's offset
+    state - this can be called at any time (an HTTP request arriving on
+    its own thread) without disturbing transcript_job's own incremental
+    read position. Bounded to the last `max_bytes` of the file so a large,
+    long-running session's transcript doesn't get read in full on every
+    request - only recent history is ever shown here anyway."""
+    path = Path(path)
+    try:
+        size = path.stat().st_size
+    except FileNotFoundError:
+        return []
+
+    with open(path, "rb") as f:
+        if size > max_bytes:
+            f.seek(size - max_bytes)
+            f.readline()  # discard whatever partial line the seek landed inside
+        data = f.read()
+
+    events: list[Event] = []
+    for raw_line in data.split(b"\n"):
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            continue
+        events.extend(parse_line(obj))
+    return events[-limit:]

@@ -594,3 +594,16 @@ async def state_snapshot_job(context: ContextTypes.DEFAULT_TYPE) -> None:
 
     state = context.bot_data["state"]
     persistence.save(state)
+
+
+async def mini_app_health_job(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Relaunches the ngrok tunnel if it died on its own since the last
+    check - a no-op whenever the Mini App is off (state.ngrok_runner is
+    None in that case). See miniapp/runner.py::ensure_running for the
+    restart cap that keeps this from hammering ngrok's servers if the
+    failure is persistent (bad auth, domain claimed elsewhere, offline)."""
+    import asyncio
+
+    state = context.bot_data["state"]
+    if state.ngrok_runner is not None:
+        await asyncio.to_thread(state.ngrok_runner.ensure_running)

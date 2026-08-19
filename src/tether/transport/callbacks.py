@@ -212,6 +212,24 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await edit(_t("confirm_set", state=_t("confirm_on" if on else "confirm_off")), menus.settings_menu(_t))
         return
 
+    # ---- Mini App toggle ----
+    if category == "miniapp":
+        action = parts[1]
+        if action == "menu":
+            current = "on" if state.config.settings.mini_app_enabled else "off"
+            await edit(_t("miniapp_prompt", state=_t("confirm_" + current)), menus.miniapp_menu(_t))
+        elif action == "set":
+            on = parts[2] == "on"
+            if on and not state.config.settings.mini_app_ngrok_domain.strip():
+                await edit(_t("miniapp_missing_config"), menus.settings_menu(_t))
+                return
+            state.config.settings.mini_app_enabled = on
+            state.config.settings.save()
+            from tether.miniapp.lifecycle import apply_mini_app_state
+            await asyncio.to_thread(apply_mini_app_state, state, context.bot, state.event_loop)
+            await edit(_t("miniapp_set", state=_t("confirm_on" if on else "confirm_off")), menus.settings_menu(_t))
+        return
+
     # ---- deferred message (held because the user was at the keyboard) ----
     if category == "defer":
         action = parts[1]

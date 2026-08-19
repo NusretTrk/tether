@@ -6,6 +6,27 @@ language: en                    # en | tr | de | es
 output_mode: summary            # live | summary | quiet | verbose
 confirm_before_send: true       # stage Send/Edit/Cancel buttons before delivering a typed message
 
+# Telegram Mini App — a real scrollable UI inside Telegram (status,
+# sessions, live transcript, settings) instead of nested button menus.
+# Off by default: it needs a one-time per-user setup outside tether
+# itself (a free ngrok account + a free static domain + installing the
+# ngrok binary + NGROK_AUTHTOKEN in .env) — see SETUP.md for the full
+# walkthrough before turning this on. When on, the chat's persistent menu
+# button switches to opening the Mini App; when off, nothing changes.
+#
+# Security model (read this before turning it on): the ngrok URL is NOT
+# treated as secret — anyone who finds it can load the page shell, but
+# every API call requires a freshly-signed Telegram initData blob for
+# YOUR chat_id specifically (see miniapp/auth.py), which nobody without
+# your bot token can forge. Still, protect your NGROK_AUTHTOKEN like any
+# other credential — if it leaks, someone could claim tunnels on your
+# ngrok account (not access this data directly, since the initData check
+# still applies, but it's still yours to protect).
+mini_app_enabled: false
+mini_app_ngrok_domain: ""       # e.g. "yourname.ngrok-free.app" - claimed once, free, in the ngrok dashboard
+mini_app_ngrok_path: ngrok      # assumes ngrok is on PATH; set a full path otherwise
+mini_app_local_port: 8743
+
 claude_window_keyword: Claude   # substring used to find the Claude Desktop window
 avd_window_keyword: Emulator    # substring used to find the Android emulator window
 

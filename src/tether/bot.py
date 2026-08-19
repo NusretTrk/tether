@@ -2,6 +2,7 @@
 handler and background job, and runs with startup-retry resilience."""
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 
@@ -17,7 +18,7 @@ from tether.transport.callbacks import handle_callback
 from tether.transport.state import AppState
 from tether.transport.text import handle_photo, handle_text
 from tether.transport.jobs import (
-    activity_job, app_health_job, deferred_send_job, dialog_job, stall_job,
+    activity_job, app_health_job, deferred_send_job, dialog_job, mini_app_health_job, stall_job,
     state_snapshot_job, target_transcript_job, temp_monitor_job, transcript_job,
     usage_limit_job,
 )
@@ -60,6 +61,11 @@ async def _post_init(app: Application) -> None:
     await app.bot.set_my_commands(BOT_COMMANDS)
 
     state = app.bot_data["state"]
+    state.event_loop = asyncio.get_running_loop()
+
+    from tether.miniapp.lifecycle import apply_mini_app_state
+    await asyncio.to_thread(apply_mini_app_state, state, app.bot, state.event_loop)
+
     recovered = app.bot_data.pop("_recovered_summary", {})
     if not recovered:
         return
@@ -86,8 +92,15 @@ async def _post_init(app: Application) -> None:
             await app.bot.send_message(chat_id, _t("session_recovered_unverified_send_generic"))
 
 
+async def _post_shutdown(app: Application) -> None:
+    from tether.miniapp.lifecycle import stop_mini_app
+    state = app.bot_data.get("state")
+    if state is not None:
+        await asyncio.to_thread(stop_mini_app, state)
+
+
 def _build_app(config: Config) -> Application:
-    app = ApplicationBuilder().token(config.secrets.bot_token).post_init(_post_init).build()
+    app = ApplicationBuilder().token(config.secrets.bot_token).post_init(_post_init).post_shutdown(_post_shutdown).build()
     state = AppState.build(config)
     app.bot_data["state"] = state
     app.bot_data["_recovered_summary"] = persistence.restore_into(state)
@@ -138,6 +151,7 @@ def _build_app(config: Config) -> Application:
         log.info("accessibility features unavailable on %s - session and dialog watchers disabled", platform_name())
     app.job_queue.run_repeating(stall_job, interval=15, first=30)
     app.job_queue.run_repeating(state_snapshot_job, interval=5, first=5)
+    app.job_queue.run_repeating(mini_app_health_job, interval=60, first=35)
     if CAPABILITIES.window_control:
         app.job_queue.run_repeating(deferred_send_job, interval=5, first=20)
     if CAPABILITIES.window_control:

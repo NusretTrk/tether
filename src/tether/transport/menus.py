@@ -102,6 +102,7 @@ def settings_menu(_t) -> InlineKeyboardMarkup:
         [InlineKeyboardButton("🌐 " + _t("language_prompt"), callback_data="lang:menu")],
         [InlineKeyboardButton("📡 " + _t("mode_prompt"), callback_data="mode:menu")],
         [InlineKeyboardButton("✅ " + _t("confirm_prompt").split(" ")[0], callback_data="confirm:menu")],
+        [InlineKeyboardButton("🚀 " + _t("miniapp_prompt").split(":")[0], callback_data="miniapp:menu")],
         [back_button(_t)],
     ])
 
@@ -122,6 +123,14 @@ def confirm_menu(_t) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton(_t("confirm_on"), callback_data="confirm:set:on"),
          InlineKeyboardButton(_t("confirm_off"), callback_data="confirm:set:off")],
+        [back_button(_t, "menu:settings")],
+    ])
+
+
+def miniapp_menu(_t) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(_t("confirm_on"), callback_data="miniapp:set:on"),
+         InlineKeyboardButton(_t("confirm_off"), callback_data="miniapp:set:off")],
         [back_button(_t, "menu:settings")],
     ])
 

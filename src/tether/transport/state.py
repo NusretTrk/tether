@@ -104,6 +104,19 @@ class AppState:
     staged_text: str | None = None
     staged_photo: bool = False
 
+    # Mini App - both None whenever mini_app_enabled is off or
+    # misconfigured (see miniapp/lifecycle.py::apply_mini_app_state).
+    # Kept on state, not module globals, since a settings toggle can
+    # start or stop these mid-run without a process restart.
+    miniapp_server: object | None = None
+    ngrok_runner: object | None = None
+    # Set once in bot.py's _post_init (the first point with a running
+    # loop). Lets code running on a foreign OS thread - the Mini App's
+    # own HTTP server - schedule an async Bot API call back onto it via
+    # asyncio.run_coroutine_threadsafe, which is the only safe way to
+    # call PTB's Bot object from outside the loop it belongs to.
+    event_loop: object | None = None
+
     # Set right after pressing Enter; cleared by transcript_job once the
     # matching USER_TEXT event is actually observed in the transcript — the
     # ground-truth confirmation that replaces the old screenshot-compare

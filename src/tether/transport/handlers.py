@@ -101,6 +101,13 @@ def _ctx(context) -> tuple:
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     state, _t = _ctx(context)
     await update.message.reply_text(_t("start_welcome"), reply_markup=menus.main_reply_keyboard(_t))
+    # Re-derives and re-applies the Mini App's on/off state and re-syncs
+    # the chat menu button - the user's own suggested fix for "the Mini
+    # App button looks stale or the tunnel silently died", so /start
+    # doubles as a manual refresh rather than requiring a full restart.
+    if state.event_loop is not None:
+        from tether.miniapp.lifecycle import apply_mini_app_state
+        await asyncio.to_thread(apply_mini_app_state, state, context.bot, state.event_loop)
 
 
 @restricted

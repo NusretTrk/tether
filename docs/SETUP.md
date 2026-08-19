@@ -78,6 +78,59 @@ and the file gets written when you change something via `/settings`.
 
 ---
 
+## Telegram Mini App (optional)
+
+A real scrollable UI inside Telegram — status, sessions, a live
+transcript view, settings — instead of nested button menus. Off by
+default. Skip this section entirely if you're happy with the buttons.
+
+**Read this before turning it on.** The Mini App needs your PC reachable
+over a public HTTPS URL, via a tunnel (ngrok) that you run alongside
+tether. The URL itself is treated as *not secret* — anyone who finds it
+can load the empty page shell, but every actual request requires a
+freshly-signed Telegram `initData` blob proving it came from your own
+Telegram session for this exact bot, which nobody without your bot token
+can forge (see `miniapp/auth.py` if you want to read the actual check).
+So the real thing to protect is the same thing you're already
+protecting: `BOT_TOKEN` and `NGROK_AUTHTOKEN`, both in `.env`, neither
+ever committed or logged.
+
+**One-time setup per install** (not per session — do this once):
+
+1. Create a free ngrok account: https://dashboard.ngrok.com/signup
+2. Claim your one free static domain from the ngrok dashboard
+   (Domains → New Domain) — something like `yourname.ngrok-free.app`.
+   It's yours permanently, it never rotates, and it costs nothing.
+3. Install the ngrok agent (https://ngrok.com/download) and make sure
+   `ngrok` runs from a terminal, or note the full path to the binary.
+4. Copy your authtoken from https://dashboard.ngrok.com/get-started/your-authtoken
+   into `.env`:
+   ```
+   NGROK_AUTHTOKEN=your token here
+   ```
+5. In `config.yaml`:
+   ```yaml
+   mini_app_enabled: true
+   mini_app_ngrok_domain: "yourname.ngrok-free.app"
+   mini_app_ngrok_path: ngrok   # only change this if it's not on PATH
+   ```
+6. Message **@BotFather**, send `/mybots`, pick your bot → **Bot
+   Settings → Menu Button → Configure menu button**, and send it
+   `https://yourname.ngrok-free.app/` as the URL. (This pairs the domain
+   with your bot — a one-time step Telegram requires, done through
+   BotFather rather than the Bot API, since domain pairing isn't
+   something a bot can do to itself.)
+7. Restart tether. Your chat's menu button (bottom-left, next to the
+   text box) now opens the Mini App. `/start` re-syncs the button any
+   time it looks stale or you're not sure it picked up a change.
+
+**Turning it off:** `/settings` → Mini App → off, or flip the same
+switch from inside the Mini App itself. Either way, the tunnel and local
+server actually stop (not just the button) — this isn't a hidden
+service running whether you use it or not.
+
+---
+
 ## Start automatically at login
 
 ```
@@ -249,3 +302,12 @@ for `antigravity`) to click the panel before pasting.
 **Bot says "Locked" and won't do anything.** You've set `BOT_PASSWORD`.
 Send `/unlock <password>`. If you're locked out from too many wrong
 guesses, wait out the window (5 minutes by default) and try again.
+
+**Mini App menu button doesn't appear, or opens a blank/error page.**
+Check `tether.log` for `could not launch ngrok` (binary not found — fix
+`mini_app_ngrok_path`) or `mini_app_ngrok_domain or NGROK_AUTHTOKEN is
+missing` (one of the two isn't set). If the button itself just looks
+stale, send `/start` — it re-syncs it. If ngrok's dashboard shows the
+tunnel as active but the page still won't load, double check step 6 in
+the Mini App section above (the domain has to be paired with your bot
+through @BotFather, not just running in ngrok).
