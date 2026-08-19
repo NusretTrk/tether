@@ -110,13 +110,17 @@ INDEX_HTML = r"""<!doctype html>
           </select>
         </div>
         <div class="row"><span class="label">Confirm before send</span>
-          <div class="switch" id="setting-confirm" data-key="confirm_before_send"></div>
+          <div class="switch" id="setting-confirm_before_send" data-key="confirm_before_send"></div>
         </div>
         <div class="row"><span class="label">Mini App</span>
-          <div class="switch" id="setting-miniapp" data-key="mini_app_enabled"></div>
+          <div class="switch" id="setting-mini_app_enabled" data-key="mini_app_enabled"></div>
         </div>
       </div>
       <p class="hint">Turning the Mini App off removes this menu button - reopen it any time from /menu, or /start refreshes the button if it looks stale.</p>
+      <div class="card" id="watcher-toggles"></div>
+      <p class="hint">Watchers tether runs in the background - turn off whichever ones don't apply to how you use it.</p>
+      <div class="card" id="threshold-fields"></div>
+      <p class="hint">Changes save as soon as you edit them - no separate save button.</p>
     </div>
   </main>
   <nav class="tabbar">
@@ -260,13 +264,62 @@ INDEX_HTML = r"""<!doctype html>
   }
 
   // ---- settings ----
+  const WATCHER_TOGGLES = [
+    ["dialog_watch_enabled", "Dialog/popup alerts"],
+    ["stall_watch_enabled", "Stall detection"],
+    ["activity_watch_enabled", "Session activity alerts"],
+    ["app_health_watch_enabled", "App health watcher"],
+    ["usage_limit_continue_enabled", "Auto-continue after usage limit"],
+    ["preserve_user_clipboard", "Preserve clipboard on paste"],
+  ];
+  const THRESHOLD_FIELDS = [
+    ["temp_emergency_c", "Emergency temp (°C)", 1, 150],
+    ["defer_when_user_active_sec", "Defer while active (sec)", 0, 600],
+    ["auto_send_after_idle_sec", "Auto-send after idle (sec)", 0, 3600],
+  ];
+
+  function ensureSettingsBuilt() {
+    const watchers = document.getElementById("watcher-toggles");
+    if (!watchers.dataset.built) {
+      watchers.innerHTML = WATCHER_TOGGLES.map(([key, label]) =>
+        '<div class="row"><span class="label">' + label + '</span><div class="switch" id="setting-' + key + '" data-key="' + key + '"></div></div>'
+      ).join("");
+      watchers.querySelectorAll(".switch").forEach((el) =>
+        el.addEventListener("click", () => toggleSwitch(el, el.dataset.key))
+      );
+      watchers.dataset.built = "1";
+    }
+    const thresholds = document.getElementById("threshold-fields");
+    if (!thresholds.dataset.built) {
+      thresholds.innerHTML = THRESHOLD_FIELDS.map(([key, label, lo, hi]) =>
+        '<div class="row"><span class="label">' + label + '</span>' +
+        '<input type="number" min="' + lo + '" max="' + hi + '" step="1" style="width:70px;text-align:right;border:0.5px solid var(--section-separator);border-radius:8px;padding:6px;background:var(--bg);color:var(--text)" id="setting-' + key + '" data-key="' + key + '"></div>'
+      ).join("");
+      thresholds.querySelectorAll("input").forEach((el) =>
+        el.addEventListener("change", () => {
+          const n = parseInt(el.value, 10);
+          if (Number.isNaN(n)) return;
+          saveSetting(el.dataset.key, n);
+        })
+      );
+      thresholds.dataset.built = "1";
+    }
+  }
+
   async function renderSettings() {
+    ensureSettingsBuilt();
     try {
       const s = await api("/api/settings");
       document.getElementById("setting-language").value = s.language;
       document.getElementById("setting-mode").value = s.output_mode;
-      document.getElementById("setting-confirm").classList.toggle("on", !!s.confirm_before_send);
-      document.getElementById("setting-miniapp").classList.toggle("on", !!s.mini_app_enabled);
+      document.getElementById("setting-confirm_before_send").classList.toggle("on", !!s.confirm_before_send);
+      document.getElementById("setting-mini_app_enabled").classList.toggle("on", !!s.mini_app_enabled);
+      for (const [key] of WATCHER_TOGGLES) {
+        document.getElementById("setting-" + key).classList.toggle("on", !!s[key]);
+      }
+      for (const [key] of THRESHOLD_FIELDS) {
+        document.getElementById("setting-" + key).value = s[key];
+      }
     } catch (e) {
       alert(friendlyError(e));
     }
@@ -274,8 +327,8 @@ INDEX_HTML = r"""<!doctype html>
 
   document.getElementById("setting-language").addEventListener("change", (e) => saveSetting("language", e.target.value));
   document.getElementById("setting-mode").addEventListener("change", (e) => saveSetting("output_mode", e.target.value));
-  document.getElementById("setting-confirm").addEventListener("click", (e) => toggleSwitch(e.currentTarget, "confirm_before_send"));
-  document.getElementById("setting-miniapp").addEventListener("click", (e) => toggleSwitch(e.currentTarget, "mini_app_enabled"));
+  document.getElementById("setting-confirm_before_send").addEventListener("click", (e) => toggleSwitch(e.currentTarget, "confirm_before_send"));
+  document.getElementById("setting-mini_app_enabled").addEventListener("click", (e) => toggleSwitch(e.currentTarget, "mini_app_enabled"));
 
   function toggleSwitch(el, key) {
     haptic("medium");

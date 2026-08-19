@@ -35,9 +35,31 @@ log = logging.getLogger(__name__)
 
 MAX_BODY_BYTES = 8192
 MAX_CONCURRENT_CONNECTIONS = 20
-ALLOWED_SETTINGS_KEYS = {"language", "output_mode", "confirm_before_send", "mini_app_enabled"}
 ALLOWED_LANGUAGES = {"en", "tr", "de", "es"}
 ALLOWED_OUTPUT_MODES = {"live", "summary", "quiet", "verbose"}
+
+# Plain on/off feature toggles - each just flips a bool, no extra validation
+# beyond "is this actually a bool". Deliberately only the watcher/behavior
+# toggles that were previously config.yaml-and-restart-only - not every
+# Settings field (window keywords, poll intervals) belongs in a quick
+# settings screen, and some (auto_recover_*, BOT_PASSWORD) are either too
+# easy to misconfigure remotely or a security control that shouldn't be
+# togglable from the same surface it's meant to protect.
+BOOL_SETTINGS_KEYS = {
+    "confirm_before_send", "mini_app_enabled",
+    "dialog_watch_enabled", "stall_watch_enabled", "activity_watch_enabled",
+    "app_health_watch_enabled", "usage_limit_continue_enabled", "preserve_user_clipboard",
+}
+# key -> (min, max) inclusive. Bounds match Settings.validate()'s own sane
+# ranges where one exists (temp_emergency_c), otherwise a judgment call
+# wide enough to be useful but narrow enough that a fat-fingered value
+# can't wedge the bot (e.g. a 0-second idle threshold that fires instantly).
+NUMERIC_SETTINGS_KEYS = {
+    "temp_emergency_c": (1, 150),
+    "defer_when_user_active_sec": (0, 600),
+    "auto_send_after_idle_sec": (0, 3600),
+}
+ALLOWED_SETTINGS_KEYS = BOOL_SETTINGS_KEYS | set(NUMERIC_SETTINGS_KEYS) | {"language", "output_mode"}
 
 
 class MiniAppServer(ThreadingHTTPServer):
@@ -270,12 +292,10 @@ class _Handler(BaseHTTPRequestHandler):
         if self._authorize() is None:
             return
         settings = self.server.state.config.settings
-        self._send_json(200, {
-            "language": settings.language,
-            "output_mode": settings.output_mode,
-            "confirm_before_send": settings.confirm_before_send,
-            "mini_app_enabled": settings.mini_app_enabled,
-        })
+        payload = {"language": settings.language, "output_mode": settings.output_mode}
+        for key in BOOL_SETTINGS_KEYS | set(NUMERIC_SETTINGS_KEYS):
+            payload[key] = getattr(settings, key)
+        self._send_json(200, payload)
 
     def _handle_settings_post(self):
         if self._authorize() is None:
@@ -300,11 +320,25 @@ class _Handler(BaseHTTPRequestHandler):
                 self._send_json(400, {"error": "invalid_value"})
                 return
             settings.output_mode = value
-        elif key in ("confirm_before_send", "mini_app_enabled"):
+        elif key in BOOL_SETTINGS_KEYS:
             if not isinstance(value, bool):
                 self._send_json(400, {"error": "invalid_value"})
                 return
             setattr(settings, key, value)
+        elif key in NUMERIC_SETTINGS_KEYS:
+            lo, hi = NUMERIC_SETTINGS_KEYS[key]
+            # isinstance(True, int) is True in Python - excluded explicitly
+            # so a stray boolean can't sneak into a numeric field.
+            if isinstance(value, bool) or not isinstance(value, int) or not (lo <= value <= hi):
+                self._send_json(400, {"error": "invalid_value"})
+                return
+            setattr(settings, key, value)
+        else:
+            # Unreachable given the ALLOWED_SETTINGS_KEYS check above,
+            # unless a key is added there without a branch here to match -
+            # refuse rather than silently no-op-ing and reporting success.
+            self._send_json(400, {"error": "unknown_key"})
+            return
 
         settings.save()
         self._send_json(200, {"ok": True})

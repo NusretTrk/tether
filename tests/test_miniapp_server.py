@@ -64,6 +64,15 @@ class FakeSettings:
     mini_app_enabled: bool = True
     mini_app_ngrok_domain: str = "test.ngrok-free.app"
     mini_app_local_port: int = 0
+    dialog_watch_enabled: bool = True
+    stall_watch_enabled: bool = True
+    activity_watch_enabled: bool = True
+    app_health_watch_enabled: bool = True
+    usage_limit_continue_enabled: bool = True
+    preserve_user_clipboard: bool = True
+    temp_emergency_c: int = 90
+    defer_when_user_active_sec: int = 20
+    auto_send_after_idle_sec: int = 45
     saved: list = field(default_factory=list)
 
     def save(self):
@@ -278,6 +287,73 @@ def test_favicon_returns_no_content_without_auth(running_server):
     req = urllib.request.Request(base + "/favicon.ico")
     with urllib.request.urlopen(req, timeout=5) as resp:
         assert resp.status == 204
+
+
+def test_settings_get_includes_watcher_toggles_and_thresholds(running_server):
+    _, base, _ = running_server
+    status, body = _request(base + "/api/settings", headers={"Authorization": "tma " + valid_init_data()})
+    assert status == 200
+    assert body["dialog_watch_enabled"] is True
+    assert body["temp_emergency_c"] == 90
+
+
+def test_settings_post_updates_a_watcher_toggle(running_server):
+    server, base, state = running_server
+    status, body = _request(
+        base + "/api/settings", method="POST",
+        headers={"Authorization": "tma " + valid_init_data()},
+        body={"key": "stall_watch_enabled", "value": False},
+    )
+    assert status == 200
+    assert state.config.settings.stall_watch_enabled is False
+
+
+def test_settings_post_updates_a_numeric_threshold_within_bounds(running_server):
+    server, base, state = running_server
+    status, body = _request(
+        base + "/api/settings", method="POST",
+        headers={"Authorization": "tma " + valid_init_data()},
+        body={"key": "temp_emergency_c", "value": 85},
+    )
+    assert status == 200
+    assert state.config.settings.temp_emergency_c == 85
+
+
+def test_settings_post_rejects_numeric_value_out_of_bounds(running_server):
+    _, base, state = running_server
+    status, body = _request(
+        base + "/api/settings", method="POST",
+        headers={"Authorization": "tma " + valid_init_data()},
+        body={"key": "temp_emergency_c", "value": 999},
+    )
+    assert status == 400
+    assert body["error"] == "invalid_value"
+    assert state.config.settings.temp_emergency_c == 90  # unchanged
+
+
+def test_settings_post_rejects_non_integer_for_numeric_key(running_server):
+    _, base, _ = running_server
+    status, body = _request(
+        base + "/api/settings", method="POST",
+        headers={"Authorization": "tma " + valid_init_data()},
+        body={"key": "temp_emergency_c", "value": "hot"},
+    )
+    assert status == 400
+    assert body["error"] == "invalid_value"
+
+
+def test_settings_post_rejects_bool_value_for_numeric_key(running_server):
+    """isinstance(True, int) is True in Python - a bare `true` sent for a
+    numeric field must not silently become 1, or slip past bounds checks
+    that assume a real number."""
+    _, base, _ = running_server
+    status, body = _request(
+        base + "/api/settings", method="POST",
+        headers={"Authorization": "tma " + valid_init_data()},
+        body={"key": "temp_emergency_c", "value": True},
+    )
+    assert status == 400
+    assert body["error"] == "invalid_value"
 
 
 def test_connection_over_cap_is_dropped_without_spawning_a_thread(running_server, monkeypatch):
