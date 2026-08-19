@@ -259,6 +259,36 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         return
 
+    # ---- shutdown timer ----
+    if category == "shutdown":
+        action = parts[1]
+        if action == "cancel":
+            state.pending_shutdown_minutes = None
+            await edit(_t("staged_cancelled"))
+            return
+        if action == "confirm":
+            minutes = state.pending_shutdown_minutes
+            state.pending_shutdown_minutes = None
+            if minutes is None:
+                await edit(_t("staged_cancelled"))
+                return
+            from tether.platform.power import schedule_shutdown
+            from tether.transport.handlers import _fmt_minutes
+            from tether.transport.jobs import SHUTDOWN_WARNING_JOB_NAME, shutdown_warning_job
+            seconds = int(minutes * 60)
+            ok = await asyncio.to_thread(schedule_shutdown, seconds)
+            if not ok:
+                await edit(_t("shutdown_failed"))
+                return
+            warn_lead = state.config.settings.shutdown_warning_lead_sec
+            if seconds > warn_lead:
+                context.job_queue.run_once(
+                    shutdown_warning_job, when=seconds - warn_lead, name=SHUTDOWN_WARNING_JOB_NAME,
+                )
+            await edit(_t("shutdown_scheduled", minutes=_fmt_minutes(minutes)))
+            return
+        return
+
     # ---- staged send (confirm-before-send flow) ----
     if category == "staged":
         action = parts[1]

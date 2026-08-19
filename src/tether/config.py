@@ -92,6 +92,11 @@ class Settings:
     usage_limit_continue_max_attempts: int = 3
     usage_limit_continue_attempt_window_sec: int = 21600
 
+    # /shutdown <minutes> sends a second Telegram warning this many seconds
+    # before the machine actually powers off, so it's never a surprise. Only
+    # sent if the scheduled delay is longer than this lead time.
+    shutdown_warning_lead_sec: int = 60
+
     stream_edit_throttle_sec: float = 2.5
     transcript_poll_interval_sec: float = 1.0
     uia_poll_interval_sec: float = 3.0

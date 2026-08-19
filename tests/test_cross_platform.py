@@ -21,7 +21,7 @@ def _run_simulating_unsupported(body: str):
         import tether.platform.capabilities as caps
         caps.CAPABILITIES = caps.Capabilities(
             window_control=False, accessibility=False,
-            hardware_temps=False, shell=True,
+            hardware_temps=False, shell=True, power_control=False,
         )
         {textwrap.indent(textwrap.dedent(body), '        ').strip()}
     """)

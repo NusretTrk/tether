@@ -14,7 +14,12 @@ from telegram.ext import ContextTypes
 
 from tether.i18n import make_translator
 from tether.monitors.temps import get_cpu_temp, get_gpu_temp
+from tether.platform.capabilities import CAPABILITIES
 from tether.transport import menus
+
+
+def _fmt_minutes(minutes: float) -> str:
+    return str(int(minutes)) if minutes == int(minutes) else f"{minutes:g}"
 
 
 def restricted(handler):
@@ -215,6 +220,45 @@ async def cmd_restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         _t("app_restart_prompt", count=count) if running else _t("app_restart_prompt_stopped"),
         reply_markup=menus.restart_confirm_keyboard(_t),
+    )
+
+
+@restricted
+async def cmd_shutdown(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/shutdown <minutes> or /shutdown cancel. Always confirmed before
+    actually scheduling - unlike a restart this ends the whole machine, not
+    just Claude's session."""
+    state, _t = _ctx(context)
+    if not CAPABILITIES.power_control:
+        await update.message.reply_text(_t("shutdown_unsupported"))
+        return
+    if not context.args:
+        await update.message.reply_text(_t("shutdown_usage"))
+        return
+
+    arg = context.args[0].lower()
+    if arg == "cancel":
+        from tether.platform.power import cancel_shutdown
+        from tether.transport.jobs import SHUTDOWN_WARNING_JOB_NAME
+        ok = await asyncio.to_thread(cancel_shutdown)
+        for job in context.job_queue.get_jobs_by_name(SHUTDOWN_WARNING_JOB_NAME):
+            job.schedule_removal()
+        await update.message.reply_text(_t("shutdown_cancelled") if ok else _t("shutdown_cancel_failed"))
+        return
+
+    try:
+        minutes = float(arg)
+    except ValueError:
+        await update.message.reply_text(_t("shutdown_usage"))
+        return
+    if minutes <= 0:
+        await update.message.reply_text(_t("shutdown_usage"))
+        return
+
+    state.pending_shutdown_minutes = minutes
+    await update.message.reply_text(
+        _t("shutdown_confirm_prompt", minutes=_fmt_minutes(minutes)),
+        reply_markup=menus.shutdown_confirm_keyboard(_t),
     )
 
 

@@ -25,6 +25,8 @@ log = logging.getLogger(__name__)
 USAGE_LIMIT_CONTINUE_JOB_NAME = "usage_limit_continue"
 USAGE_LIMIT_CONTINUE_TEXT = "Continue, you were interrupted by usage limit."
 
+SHUTDOWN_WARNING_JOB_NAME = "shutdown_warning"
+
 USAGE_LIMIT_KEYWORDS = (
     "usage limit reached",
     "reached your usage limit",
@@ -492,3 +494,13 @@ async def deferred_send_job(context: ContextTypes.DEFAULT_TYPE) -> None:
         await context.bot.send_message(chat_id, _t("deferred_auto_sent"))
     else:
         await context.bot.send_message(chat_id, _t("error_generic", error=reason))
+
+
+async def shutdown_warning_job(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """One-shot heads-up sent shortly before a /shutdown countdown actually
+    fires, so it's never a surprise even if the confirming message got
+    missed. Scheduled by the shutdown:confirm callback, cancelled by
+    /shutdown cancel."""
+    state = context.bot_data["state"]
+    _t = make_translator(state.config.settings.language)
+    await context.bot.send_message(state.config.secrets.chat_id, _t("shutdown_warning"))

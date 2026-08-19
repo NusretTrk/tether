@@ -27,6 +27,11 @@ class Capabilities:
     accessibility: bool      # session list, dialog detection
     hardware_temps: bool     # CPU temperature
     shell: bool              # /cmd
+    # Scheduling/cancelling a shutdown of the local machine without admin.
+    # `shutdown /s /t N` works as a normal user on Windows; macOS/Linux
+    # equivalents typically need root, so this stays False there until
+    # that's actually verified rather than assumed to work.
+    power_control: bool
 
     @property
     def any_control(self) -> bool:
@@ -40,6 +45,7 @@ def detect() -> Capabilities:
             accessibility=True,
             hardware_temps=True,
             shell=True,
+            power_control=True,
         )
     # macOS control would need the Accessibility API via pyobjc and a
     # trust prompt; Linux would need AT-SPI. Neither is implemented, so
@@ -49,6 +55,7 @@ def detect() -> Capabilities:
         accessibility=False,
         hardware_temps=False,
         shell=True,
+        power_control=False,
     )
 
 

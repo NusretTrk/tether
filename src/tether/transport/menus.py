@@ -215,6 +215,15 @@ def restart_confirm_keyboard(_t) -> InlineKeyboardMarkup:
     ])
 
 
+def shutdown_confirm_keyboard(_t) -> InlineKeyboardMarkup:
+    """Shutting down ends the whole machine, not just Claude's session -
+    always confirmed, never automatic."""
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(_t("shutdown_confirm_yes"), callback_data="shutdown:confirm"),
+         InlineKeyboardButton(_t("staged_cancel"), callback_data="shutdown:cancel")],
+    ])
+
+
 def deferred_keyboard(_t) -> InlineKeyboardMarkup:
     """Shown when a message is held back because someone is using the
     machine. Nothing has been typed yet at this point."""

@@ -41,6 +41,11 @@ class AppState:
     usage_limit_continue_scheduled: bool = False
     usage_limit_continue: ContinueDecider = field(default_factory=lambda: ContinueDecider(ContinuePolicy()))
 
+    # Awaiting confirmation from the /shutdown <minutes> inline keyboard.
+    # None once confirmed/cancelled - the actual countdown after that point
+    # is tracked by Windows itself (`shutdown /a` to cancel), not here.
+    pending_shutdown_minutes: float | None = None
+
     # error signature -> monotonic time last forwarded to Telegram,
     # so a repeating fault doesn't flood the chat (see error_handler).
     error_notify_times: dict[str, float] = field(default_factory=dict)

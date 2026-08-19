@@ -34,6 +34,7 @@ BOT_COMMANDS = [
     BotCommand("stop", "Stop the current generation"),
     BotCommand("kill", "Close terminal/emulator/Claude"),
     BotCommand("restart", "Restart Claude Desktop cleanly"),
+    BotCommand("shutdown", "Shut down this PC (minutes, or 'cancel')"),
     BotCommand("launch", "Start Claude Desktop if it is not running"),
     BotCommand("keys", "Send a key to the app (answer prompts)"),
     BotCommand("window", "Change which window Claude/AVD points at"),
@@ -68,6 +69,7 @@ def _build_app(config: Config) -> Application:
     app.add_handler(CommandHandler("stop", handlers.cmd_stop))
     app.add_handler(CommandHandler("kill", handlers.cmd_kill))
     app.add_handler(CommandHandler("restart", handlers.cmd_restart))
+    app.add_handler(CommandHandler("shutdown", handlers.cmd_shutdown))
     app.add_handler(CommandHandler("launch", handlers.cmd_launch))
     app.add_handler(CommandHandler("keys", handlers.cmd_keys))
     app.add_handler(CommandHandler("window", handlers.cmd_window))
