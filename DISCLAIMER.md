@@ -27,9 +27,17 @@ This is remote control software. Read this part properly before running it.
 - **It reads your agent transcripts.** Whatever is in those sessions,
   including anything sensitive you typed, can be forwarded to your Telegram
   chat.
-- **The only access control is your Telegram chat ID.** Messages from any
-  other chat are ignored. If your bot token leaks, revoke it immediately via
-  @BotFather; a leaked token means someone else can drive the bot.
+- **The primary access control is your Telegram chat ID.** Messages from
+  any other chat are ignored. If your bot token leaks, revoke it
+  immediately via @BotFather; a leaked token means someone else can drive
+  the bot. An optional `BOT_PASSWORD` in `.env` adds a second factor on top
+  — worth setting if you want protection that doesn't rely entirely on
+  your Telegram account itself never being compromised, since chat-id
+  whitelisting alone does nothing against that specific scenario.
+- **Telegram's Bot API is not end-to-end encrypted.** It's encrypted in
+  transit (TLS) like any HTTPS traffic, but Telegram's actual end-to-end
+  feature (Secret Chats) doesn't exist for bots. Don't treat this bot as
+  more private than a normal Telegram conversation, because it isn't one.
 
 ## Your responsibilities
 

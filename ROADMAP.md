@@ -7,62 +7,71 @@ forgotten — if it's not done, it's below with a reason.
 
 - Transcript-based reading (no OCR for content)
 - Session list + switch via accessibility tree, Running/Idle status
-- Done-notifications, dialog/popup alerts, stall detection
+- Start/done notifications, dialog/popup alerts, stall detection
 - Remote keypad, bare-key shortcuts, per-app keypad profiles
 - Photo send, photo + caption in one message
 - Model / effort control
 - `/cmd` with real output, HTML-escaped
 - 4 languages, runtime settings, log redaction
-- Cross-platform degradation (monitoring works everywhere)
 - App lifecycle: `/restart`, `/launch`, health watcher, path-safe kill
-- Security: chat-id gate, key allowlist, structural regression tests
+- Security: chat-id gate, optional `BOT_PASSWORD` second factor with a
+  capped-attempts lockout, key allowlist, structural regression tests
+- Focus-safe sending — messages queue instead of stealing focus while
+  the user is actively at the keyboard (`GetLastInputInfo`)
+- Clipboard preservation around every paste (Windows; text only)
+- Self-healing — health watcher auto-recovers the safe case (app died
+  while nobody was at the keyboard), hard attempt cap so it can't loop
+- Usage-limit auto-continue — parses the actual reset time out of
+  Claude's own message, resumes automatically after it, cancels itself
+  cleanly if the session recovers first (including via Claude Desktop's
+  own native auto-continue checkbox)
+- `/shutdown <minutes>|cancel` — confirmed, cancellable, warns before firing
+- `/files` and `/file <path>` — fetch a file the agent wrote, sandboxed
+  to the active project's own directory
+- `/target` — route plain messages to Cursor/Antigravity/a terminal/any
+  window instead of Claude Desktop, via the existing keypad_profiles
+  config, with an optional `input_click` for apps that don't auto-focus
+  their input panel (confirmed necessary and working live, not assumed,
+  against a real Antigravity window)
+- Basic macOS/Linux window control (find/focus/type/screenshot) —
+  unverified on real hardware, developed on Windows only
+- Idle backoff — UIA polling (session list, dialogs) skips entirely once
+  the app is confirmed not running, instead of polling every 3s regardless
 
-## Next (reliability first)
+## Next (reliability)
 
-These come first because none of the exciting features matter if the core
-drops work.
-
-1. **Don't steal focus while you're typing** — `GetLastInputInfo` gives
-   idle time. If the user is actively at the keyboard, queue the send
-   rather than yanking focus mid-sentence.
-2. **Clipboard preservation** — every paste currently clobbers whatever
-   the user had copied. Save and restore around it.
-3. **Self-healing** — health watcher currently only reports. Auto-recover
-   the safe cases (app died with nothing running) with hard attempt limits
-   so it can't loop.
-4. **Watchdog for tether itself** — nothing notices if the bot dies. Last
-   remaining single point of failure.
-5. **Crash-safe state** — `pending_send`, staged photos, and pending
+1. **Watchdog for tether itself** — nothing notices if the bot process
+   dies. Last remaining single point of failure.
+2. **Crash-safe state** — `pending_send`, staged photos, and pending
    `ask()` all live in memory; a restart mid-flow loses them.
+3. **Real macOS/Linux verification** — the window control code is written
+   against documented syntax, never run on real hardware. Needs someone
+   with a Mac or Linux box to actually try it and report what breaks.
 
-## Then (multi-app control)
+## Then (deeper multi-app control)
 
-6. **Cursor / Antigravity / VS Code as full targets** — keypad profiles
-   already send keys to them. Missing: typing into them, and reading their
-   state. Needs `stage_text` to accept a window target instead of being
-   bound to Claude Desktop.
-7. **Claude Code in a terminal** — worth noting this is *closer than it
-   looks*: the CLI writes the same `~/.claude/projects/*.jsonl` transcripts
-   as the desktop app, and discovery already picks the newest across all
-   projects. Reading a terminal session may already work; only the typing
-   target needs redirecting.
-8. **Customizable everything** — more settings editable from Telegram
-   rather than config.yaml + restart. Keypad profiles exist; extend the
-   same pattern to window keywords, intervals, thresholds, watcher toggles.
+4. **Reading Cursor/Antigravity state** — `/target` covers typing and
+   sending now; reading their session/state doesn't exist, since that
+   needs each app's own accessibility surface rather than window
+   automation, the same gap that keeps macOS/Linux at "basic" control.
+5. **Customizable everything** — more settings editable from Telegram
+   rather than config.yaml + restart. Keypad profiles (and now target
+   profiles) exist as the pattern; extend it to window keywords,
+   intervals, thresholds, watcher toggles.
 
 ## After that (interface)
 
-9. **Telegram Mini App** — real UI inside Telegram: scrollable transcript,
+6. **Telegram Mini App** — real UI inside Telegram: scrollable transcript,
    session list, settings forms instead of nested button menus. Needs free
    static hosting plus a tunnel to reach the PC.
-10. **Voice** — ElevenLabs for output, transcription for input. Interfaces
-    already defined in `voice/base.py`, nothing implemented. Telegram has
-    no native speech either direction.
-11. **Cloud relay + Wake-on-LAN** — a small always-on instance so Telegram
-    still answers when the PC is off: reports offline, queues commands, can
-    wake the machine. Constraint: only one process may poll a bot token, so
-    the relay has to own polling and forward to the PC rather than run
-    alongside it.
+7. **Voice** — ElevenLabs for output, transcription for input. Interfaces
+   already defined in `voice/base.py`, nothing implemented. Telegram has
+   no native speech either direction.
+8. **Cloud relay + Wake-on-LAN** — a small always-on instance so Telegram
+   still answers when the PC is off: reports offline, queues commands, can
+   wake the machine. Constraint: only one process may poll a bot token, so
+   the relay has to own polling and forward to the PC rather than run
+   alongside it.
 
 ## Deliberately not doing
 
@@ -71,8 +80,7 @@ drops work.
   liability.
 - **Auto-restart without limits.** Any self-healing gets an attempt cap.
   A restart loop fighting a real problem is worse than staying down.
-
-## Open, needs a decision
-
-- **GitHub push** — still not pushed. Needs a repo name and public/private
-  from the user.
+- **Faking end-to-end encryption.** Telegram's Bot API doesn't support it;
+  encrypting message bodies while still needing them readable in a normal
+  Telegram client isn't a real option, so this stays honestly out of scope
+  rather than half-implemented.

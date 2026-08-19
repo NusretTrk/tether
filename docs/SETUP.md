@@ -8,8 +8,11 @@ python setup.py
 ```
 
 `setup.py` walks you through it: you paste a bot token, it checks the token
-is valid, then asks you to message the bot and picks up your chat ID
-automatically. No copying IDs from other bots, no editing files by hand.
+is valid, then gives you a link that carries a one-time code baked in. Only
+a reply containing that exact code counts as proof it's really you — not
+just whoever happened to message the bot first, which matters for a
+freshly created bot whose username is guessable for a short window. No
+copying IDs from other bots, no editing files by hand.
 
 Then start it:
 
@@ -55,10 +58,23 @@ replies with `Id: 123456789`.
 
 `.env` is gitignored and must never be committed.
 
-Behaviour settings (language, intervals, temperature thresholds) live in
-`config.yaml`. Copy `config.example.yaml` if you want to change defaults
-before first run; otherwise defaults apply and the file gets written when
-you change something via `/settings`.
+Optional: add a second-factor password on top of the chat-id check.
+
+```
+BOT_PASSWORD=something only you know
+```
+
+Leave it out and nothing changes — the bot behaves exactly as before. Set
+it and every command except `/start`, `/unlock`, and `/help` is locked
+until you send `/unlock <password>`; `/lock` re-locks on demand. This
+matters specifically if your Telegram account itself were ever
+compromised, since the chat-id check alone can't tell that situation apart
+from you.
+
+Behaviour settings (language, intervals, temperature thresholds, keypad
+profiles for other apps) live in `config.yaml`. Copy `config.example.yaml`
+if you want to change defaults before first run; otherwise defaults apply
+and the file gets written when you change something via `/settings`.
 
 ---
 
@@ -171,3 +187,14 @@ temperature comes from `nvidia-smi` and is independent.
 from Windows accessibility data, which Chromium builds lazily — tether
 retries automatically, but the very first call after launching Claude can
 come back empty.
+
+**`/target <name>` doesn't seem to type anywhere.** Some apps don't put
+keyboard focus in their chat/input panel just because the window came to
+the foreground — confirmed live against Antigravity, where a message sent
+without a click landed nowhere. Add `input_click: {x, y}` to that profile
+in `config.yaml` (window-relative percentages, see the commented example
+for `antigravity`) to click the panel before pasting.
+
+**Bot says "Locked" and won't do anything.** You've set `BOT_PASSWORD`.
+Send `/unlock <password>`. If you're locked out from too many wrong
+guesses, wait out the window (5 minutes by default) and try again.
