@@ -7,6 +7,7 @@ it up. Writes .env at the end.
 """
 from __future__ import annotations
 
+import secrets
 import sys
 import time
 from pathlib import Path
@@ -35,9 +36,49 @@ def verify_token(token: str) -> str:
     return r.json()["result"]["username"]
 
 
+def make_setup_nonce() -> str:
+    """A one-time secret that never leaves this machine except by round-
+    tripping through Telegram's own deep-link mechanism."""
+    return secrets.token_urlsafe(12)
+
+
+def deep_link(username: str, nonce: str) -> str:
+    return f"https://t.me/{username}?start={nonce}"
+
+
+def extract_matching_chat_id(update: dict, nonce: str) -> int | None:
+    """Returns the chat id if this update is a /start carrying exactly the
+    expected nonce, else None. Pulled out as a pure function so every case
+    (right payload, wrong payload, no payload, edited message, malformed
+    update) is testable without a network call."""
+    msg = update.get("message") or update.get("edited_message")
+    if not msg or "chat" not in msg:
+        return None
+    text = (msg.get("text") or "").strip()
+    if text != f"/start {nonce}":
+        return None
+    return int(msg["chat"]["id"])
+
+
 def wait_for_chat_id(token: str, username: str, timeout: int = 300) -> int:
-    """Polls getUpdates until the user messages the bot, then returns their id."""
-    # Clear any backlog first so an old message doesn't pick the wrong chat.
+    """Waits for proof that whoever is running this script is the same
+    person who will end up owning the bot, then returns their chat id.
+
+    This project is meant to be cloned and run by anyone, so "whoever
+    messages first" is the wrong trust model to ship - a bot's username is
+    only unguessable for the few seconds after BotFather hands it out, and
+    "first message wins" bakes that timing assumption into every install
+    forever. A random nonce embedded in a Telegram deep link (t.me/<bot>?
+    start=<nonce>) fixes it structurally instead: only a message carrying
+    the exact nonce generated on *this* machine, for *this* run, is
+    accepted. Nothing else - a stray message, a similar name, a lucky
+    guess - can produce a match.
+    """
+    nonce = make_setup_nonce()
+
+    # Clear any backlog first so a leftover old message can't be mistaken
+    # for the answer (it never carries the fresh nonce anyway, but this
+    # keeps the log clean and the wait fast).
     try:
         r = httpx.get(API.format(token=token, method="getUpdates"), timeout=15)
         updates = r.json().get("result", [])
@@ -45,8 +86,12 @@ def wait_for_chat_id(token: str, username: str, timeout: int = 300) -> int:
     except Exception:
         offset = None
 
-    print(f"\n  Now open Telegram, find @{username}, and send it any message.")
-    print("  (Press Ctrl+C to cancel.)\n")
+    link = deep_link(username, nonce)
+    print(f"\n  Open this link to connect your account:\n\n    {link}\n")
+    print("  (Tapping it sends the bot a one-time code proving it's really you.")
+    print("  If it won't open, message the bot this exact text instead:")
+    print(f"    /start {nonce}")
+    print("  Press Ctrl+C to cancel.)\n")
 
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -56,16 +101,14 @@ def wait_for_chat_id(token: str, username: str, timeout: int = 300) -> int:
         try:
             r = httpx.get(API.format(token=token, method="getUpdates"), params=params, timeout=30)
             for update in r.json().get("result", []):
-                msg = update.get("message") or update.get("edited_message")
-                if msg and "chat" in msg:
-                    chat = msg["chat"]
-                    name = chat.get("first_name") or chat.get("title") or "?"
-                    print(f"  Got a message from {name} (id {chat['id']}).")
-                    return int(chat["id"])
+                chat_id = extract_matching_chat_id(update, nonce)
+                if chat_id is not None:
+                    print(f"  Verified (chat id {chat_id}).")
+                    return chat_id
                 offset = update["update_id"] + 1
         except httpx.HTTPError:
             time.sleep(2)
-    fail("Timed out waiting for a message. Run setup again when you're ready.")
+    fail("Timed out waiting for confirmation. Run setup again when you're ready.")
 
 
 def main() -> None:
