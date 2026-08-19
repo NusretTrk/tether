@@ -335,6 +335,12 @@ async def activity_job(context: ContextTypes.DEFAULT_TYPE) -> None:
     settings = state.config.settings
     if not settings.activity_watch_enabled:
         return
+    # app_health_job already confirmed Claude Desktop isn't running - there
+    # are no sessions to list, so this UIA poll would just be a wasted
+    # round-trip every 3s. `is False` specifically (not falsy): None means
+    # "not checked yet", which must NOT be treated as "confirmed down".
+    if state.app_was_running is False:
+        return
     _t = make_translator(settings.language)
     started, finished = await asyncio.to_thread(state.activity_watcher.poll)
     for name in started:
@@ -348,6 +354,9 @@ async def dialog_job(context: ContextTypes.DEFAULT_TYPE) -> None:
     state = context.bot_data["state"]
     settings = state.config.settings
     if not settings.dialog_watch_enabled:
+        return
+    # Same reasoning as activity_job - no window means no dialogs to find.
+    if state.app_was_running is False:
         return
     _t = make_translator(settings.language)
     dialogs = await asyncio.to_thread(state.dialog_watcher.poll)
