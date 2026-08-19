@@ -50,6 +50,7 @@ BOT_COMMANDS = [
     BotCommand("language", "Change language"),
     BotCommand("mode", "Change output verbosity"),
     BotCommand("confirm", "Toggle send confirmation"),
+    BotCommand("miniapp", "Mini App status, or on/off"),
     BotCommand("settings", "View/edit settings"),
     BotCommand("help", "Show help"),
 ]
@@ -130,6 +131,7 @@ def _build_app(config: Config) -> Application:
     app.add_handler(CommandHandler("language", handlers.cmd_language))
     app.add_handler(CommandHandler("mode", handlers.cmd_mode))
     app.add_handler(CommandHandler("confirm", handlers.cmd_confirm))
+    app.add_handler(CommandHandler("miniapp", handlers.cmd_miniapp))
     app.add_handler(CommandHandler("settings", handlers.cmd_settings))
     app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))

@@ -101,8 +101,27 @@ ever committed or logged.
 2. Claim your one free static domain from the ngrok dashboard
    (Domains → New Domain) — something like `yourname.ngrok-free.app`.
    It's yours permanently, it never rotates, and it costs nothing.
-3. Install the ngrok agent (https://ngrok.com/download) and make sure
-   `ngrok` runs from a terminal, or note the full path to the binary.
+3. **Install the actual ngrok agent — this step is required, not
+   optional.** The token and domain from steps 1-2 are just credentials;
+   something has to actually run on this PC and use them to open the
+   tunnel, and that something is the ngrok agent binary. Get it from
+   https://ngrok.com/download (the page shows a `winget install
+   ngrok.ngrok` command too) and confirm `ngrok --version` actually
+   prints a version from a terminal, or note the full path to the binary
+   for `mini_app_ngrok_path` below.
+
+   **Gotcha, confirmed while building this**: if you've ever run `pip
+   install pyngrok` for something unrelated, it can put its own
+   `ngrok.exe` shim on `PATH` first — a different tool (a Python
+   wrapper that tries to auto-download the real agent on first run) that
+   is NOT the same as the official standalone agent above and can fail
+   in ways that look identical to "ngrok isn't installed" (in one case,
+   an expired SSL certificate broke its auto-download entirely). If
+   `/miniapp` or the menu button gives `ERR_NGROK_3200` / "endpoint is
+   offline" and `ngrok --version` doesn't look right, check `where
+   ngrok` (Windows) for a second copy living somewhere odd (e.g. a
+   Python `Scripts` folder) and either remove it from PATH or point
+   `mini_app_ngrok_path` at the real one's full path explicitly.
 4. Copy your authtoken from https://dashboard.ngrok.com/get-started/your-authtoken.
    Set it and your domain either by hand, or from inside the bot itself —
    both work, pick whichever's easier:
@@ -125,8 +144,14 @@ ever committed or logged.
    mini_app_ngrok_domain: "yourname.ngrok-free.app"
    mini_app_ngrok_path: ngrok   # only change this if it's not on PATH
    ```
-5. Turn it on: `/settings` → Mini App → on (refuses with a clear message
-   if the token or domain isn't set yet — nothing half-starts).
+5. Turn it on — `/miniapp on` is the fastest way (or `/settings` → Mini
+   App → on). Refuses with a clear message if the token or domain isn't
+   set yet — nothing half-starts. `/miniapp` with no argument any time
+   shows whether it's actually running right now, not just whether the
+   setting is on. `/miniapp off` stops the local server AND kills the
+   ngrok process — a real stop, not just hiding the button, for whenever
+   you don't need your PC reachable and don't want it "streaming" in the
+   background.
 6. Message **@BotFather**, send `/mybots`, pick your bot → **Bot
    Settings → Menu Button → Configure menu button**, and send it
    `https://yourname.ngrok-free.app/` as the URL. (This pairs the domain
@@ -321,8 +346,15 @@ guesses, wait out the window (5 minutes by default) and try again.
 **Mini App menu button doesn't appear, or opens a blank/error page.**
 Check `tether.log` for `could not launch ngrok` (binary not found — fix
 `mini_app_ngrok_path`) or `mini_app_ngrok_domain or NGROK_AUTHTOKEN is
-missing` (one of the two isn't set). If the button itself just looks
-stale, send `/start` — it re-syncs it. If ngrok's dashboard shows the
-tunnel as active but the page still won't load, double check step 6 in
-the Mini App section above (the domain has to be paired with your bot
-through @BotFather, not just running in ngrok).
+missing` (one of the two isn't set). If tether launched ngrok
+successfully but the tunnel still isn't working (e.g. the page shows
+`ERR_NGROK_3200` / "endpoint is offline"), check `ngrok.log` in the
+project folder — that's ngrok's own output, kept separate from
+`tether.log` since it's a different process, and will show the actual
+reason (bad auth, wrong binary, network trouble). See the pyngrok
+gotcha in the Mini App setup section above if `ngrok.log` mentions a
+download failure. If the button itself just looks stale, send
+`/start` — it re-syncs it. If ngrok's dashboard shows the tunnel as
+active but the page still won't load, double check step 6 in the Mini
+App section above (the domain has to be paired with your bot through
+@BotFather, not just running in ngrok).

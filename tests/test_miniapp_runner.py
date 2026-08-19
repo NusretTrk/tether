@@ -7,7 +7,15 @@ import subprocess
 
 import pytest
 
+from tether.miniapp import runner as runner_mod
 from tether.miniapp.runner import NgrokRunner
+
+
+@pytest.fixture(autouse=True)
+def isolated_ngrok_log(tmp_path, monkeypatch):
+    """start() opens a real log file - redirected to tmp_path so tests
+    never write into the actual project directory."""
+    monkeypatch.setattr(runner_mod, "NGROK_LOG_PATH", tmp_path / "ngrok.log")
 
 
 class FakeProcess:
@@ -132,3 +140,39 @@ def test_missing_ngrok_binary_reports_failure_without_raising(monkeypatch):
     r = NgrokRunner("nonexistent-ngrok-binary", "d", 1, "t")
     assert r.start() is False
     assert r.is_running() is False
+
+
+def test_ngrok_own_stdout_and_stderr_are_captured_to_a_log_file(monkeypatch, tmp_path):
+    """A silent ngrok failure (bad binary, expired auth, a broken
+    downloader shim shadowing the real agent on PATH) used to leave zero
+    trace anywhere - this is what makes it diagnosable instead."""
+    captured = {}
+
+    def fake_popen(cmd, stdout=None, stderr=None, **kwargs):
+        captured["stdout"] = stdout
+        captured["stderr"] = stderr
+        return FakeProcess()
+
+    monkeypatch.setattr(subprocess, "Popen", fake_popen)
+    r = NgrokRunner("ngrok", "d", 1, "t")
+    r.start()
+
+    assert captured["stdout"] is not None and captured["stdout"] != subprocess.DEVNULL
+    assert captured["stderr"] == subprocess.STDOUT
+
+
+def test_log_file_handle_is_closed_on_stop(monkeypatch, tmp_path):
+    monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: FakeProcess())
+    r = NgrokRunner("ngrok", "d", 1, "t")
+    r.start()
+    handle = r._log_file
+    r.stop()
+    assert handle.closed
+    assert r._log_file is None
+
+
+def test_missing_binary_does_not_leak_an_open_log_handle(monkeypatch):
+    monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: (_ for _ in ()).throw(OSError("not found")))
+    r = NgrokRunner("nonexistent-ngrok-binary", "d", 1, "t")
+    r.start()
+    assert r._log_file is None

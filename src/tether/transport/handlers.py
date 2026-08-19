@@ -535,6 +535,36 @@ async def cmd_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 @restricted
+async def cmd_miniapp(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Quick on/off/status without going through /settings -> Mini App ->
+    ... - turning it off actually stops the local server AND kills the
+    ngrok subprocess (see miniapp/lifecycle.py::stop_mini_app), so this
+    is a genuine "stop it from being reachable at all" control, not just
+    hiding the menu button while it keeps running in the background."""
+    state, _t = _ctx(context)
+    arg = (context.args[0].lower() if context.args else "")
+    if arg in ("on", "off"):
+        on = arg == "on"
+        if on and (not state.config.settings.mini_app_ngrok_domain.strip() or not state.config.secrets.ngrok_authtoken):
+            await update.message.reply_text(_t("miniapp_missing_config"))
+            return
+        state.config.settings.mini_app_enabled = on
+        state.config.settings.save()
+        from tether.miniapp.lifecycle import apply_mini_app_state
+        await asyncio.to_thread(apply_mini_app_state, state, context.bot, state.event_loop)
+        await update.message.reply_text(_t("miniapp_set", state=_t("confirm_on" if on else "confirm_off")))
+        return
+
+    running = state.miniapp_server is not None
+    domain = state.config.settings.mini_app_ngrok_domain or "—"
+    token_set = "✅" if state.config.secrets.ngrok_authtoken else "❌"
+    await update.message.reply_text(
+        _t("miniapp_status", running=_t("confirm_on" if running else "confirm_off"), domain=domain, token=token_set),
+        reply_markup=menus.miniapp_menu(_t),
+    )
+
+
+@restricted
 async def cmd_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
     state, _t = _ctx(context)
     from dataclasses import asdict

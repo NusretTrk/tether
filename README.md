@@ -185,6 +185,7 @@ the MCP server: [docs/SETUP.md](docs/SETUP.md).
 | `/language` | Switch language |
 | `/mode` | Output verbosity: live / summary / quiet / verbose |
 | `/confirm on\|off` | Stage Send/Edit/Cancel before delivering, or send instantly |
+| `/miniapp [on\|off]` | Mini App status (actually-running, not just the setting), or turn it on/off directly |
 | `/settings` | View and edit runtime settings |
 
 Plain text (not a command) is typed into Claude's input box, or wherever
