@@ -22,6 +22,15 @@ from tether.transport.streaming import make_streamer
 
 log = logging.getLogger(__name__)
 
+# Claude Desktop shipped its own "auto-continue after reset" checkbox on
+# 2026-08-14 (in-app setting, resumes the session locally once the window
+# resets). This doesn't make the code below redundant so much as narrower
+# in scope: the native checkbox resumes the session but never tells you it
+# did, and only exists for Desktop's own chat UI, not any other target this
+# might drive later. Kept as-is - if the native feature (or the user, or
+# anything else) resumes the session first, usage_limit_job already
+# cancels this on its own the moment new real activity shows up (see the
+# "resumed_on_own" branch below), so the two don't fight each other.
 USAGE_LIMIT_CONTINUE_JOB_NAME = "usage_limit_continue"
 USAGE_LIMIT_CONTINUE_TEXT = "Continue, you were interrupted by usage limit."
 
