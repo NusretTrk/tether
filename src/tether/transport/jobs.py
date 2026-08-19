@@ -327,7 +327,9 @@ async def activity_job(context: ContextTypes.DEFAULT_TYPE) -> None:
     if not settings.activity_watch_enabled:
         return
     _t = make_translator(settings.language)
-    finished = await asyncio.to_thread(state.activity_watcher.poll)
+    started, finished = await asyncio.to_thread(state.activity_watcher.poll)
+    for name in started:
+        await context.bot.send_message(state.config.secrets.chat_id, _t("activity_started", name=name))
     for name in finished:
         await context.bot.send_message(state.config.secrets.chat_id, _t("activity_done", name=name))
 

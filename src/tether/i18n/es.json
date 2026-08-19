@@ -84,6 +84,7 @@
   "shutdown_warning": "🔌 Se apagará muy pronto — para cancelar: /shutdown cancel",
   "dialog_alert": "⚠️ Apareció un diálogo: \"{name}\"\nBotones: {buttons}",
   "activity_done": "✅ {name} terminó.",
+  "activity_started": "▶️ {name} comenzó.",
   "error_generic": "Error: {error}",
   "claude_not_found": "No se encontró la ventana de Claude.",
   "kill_menu_title": "¿Qué quieres cerrar?",

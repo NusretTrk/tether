@@ -84,6 +84,7 @@
   "shutdown_warning": "🔌 Shutting down very soon — /shutdown cancel to abort.",
   "dialog_alert": "⚠️ Dialog appeared: \"{name}\"\nButtons: {buttons}",
   "activity_done": "✅ {name} finished.",
+  "activity_started": "▶️ {name} started.",
   "error_generic": "Error: {error}",
   "claude_not_found": "Claude window not found.",
   "kill_menu_title": "Close which one?",

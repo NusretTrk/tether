@@ -84,6 +84,7 @@
   "shutdown_warning": "🔌 Çok yakında kapatılacak — iptal için: /shutdown cancel",
   "dialog_alert": "⚠️ Bir pencere açıldı: \"{name}\"\nDüğmeler: {buttons}",
   "activity_done": "✅ {name} tamamlandı.",
+  "activity_started": "▶️ {name} başladı.",
   "error_generic": "Hata: {error}",
   "claude_not_found": "Claude penceresi bulunamadı.",
   "kill_menu_title": "Hangisi kapatılsın?",

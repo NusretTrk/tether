@@ -84,6 +84,7 @@
   "shutdown_warning": "🔌 Fährt gleich herunter — zum Abbrechen: /shutdown cancel",
   "dialog_alert": "⚠️ Dialog erschienen: \"{name}\"\nSchaltflächen: {buttons}",
   "activity_done": "✅ {name} abgeschlossen.",
+  "activity_started": "▶️ {name} gestartet.",
   "error_generic": "Fehler: {error}",
   "claude_not_found": "Claude-Fenster nicht gefunden.",
   "kill_menu_title": "Was soll geschlossen werden?",
