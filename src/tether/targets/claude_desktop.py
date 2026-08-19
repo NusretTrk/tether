@@ -134,7 +134,13 @@ class ClaudeDesktopTarget:
     def _hwnd(self):
         if not CAPABILITIES.window_control:
             return None
-        return find_window_by_keyword(self.window_keyword)
+        # app_path_filter already exists for process-killing (Claude
+        # Desktop and the separate Claude Code CLI share the same
+        # claude.exe name) - threading it into window-finding too closes
+        # a real bug: a browser tab with "Claude" in its title can
+        # otherwise outrank the real app purely on window area, silently
+        # becoming the target for every click/paste/OCR call that follows.
+        return find_window_by_keyword(self.window_keyword, path_contains=self.app_path_filter)
 
     def is_available(self) -> bool:
         if not CAPABILITIES.window_control:

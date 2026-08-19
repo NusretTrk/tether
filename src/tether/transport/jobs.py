@@ -17,7 +17,7 @@ from tether.monitors.usage_limit import parse_reset_time
 from tether.platform.capabilities import CAPABILITIES
 from tether.sources.discovery import find_active_transcript
 from tether.transport import menus
-from tether.transport.formatting import truncate_with_notice
+from tether.transport.formatting import normalize_for_comparison, truncate_with_notice
 from tether.transport.streaming import make_streamer
 
 log = logging.getLogger(__name__)
@@ -126,7 +126,7 @@ async def transcript_job(context: ContextTypes.DEFAULT_TYPE) -> None:
             event.type == EventType.USER_TEXT
             and state.pending_send_kind == "text"
             and state.pending_send_text is not None
-            and event.text.strip() == state.pending_send_text.strip()
+            and normalize_for_comparison(event.text) == normalize_for_comparison(state.pending_send_text)
         )
         image_confirmed = (
             event.type == EventType.IMAGE

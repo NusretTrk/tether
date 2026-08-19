@@ -52,10 +52,17 @@ def _geometry(window_id: int) -> dict[str, int]:
     return dims
 
 
-def find_window_by_keyword(keyword: str) -> int | None:
+def find_window_by_keyword(keyword: str, path_contains: str | None = None) -> int | None:
     """Picks the largest-area match, same reasoning as the Windows
     implementation - a toolbar/side-panel window can also match the
-    keyword, the real app window is usually the biggest."""
+    keyword, the real app window is usually the biggest.
+
+    `path_contains` is accepted for signature compatibility with the
+    Windows implementation (which rejects a title match whose owning
+    process lives somewhere unexpected, e.g. a browser tab outranking the
+    real app purely by title) but not applied here yet - doing this
+    properly needs real Linux hardware to verify against, which this
+    project doesn't have (see the module-level "unverified" note)."""
     _require_linux("Finding a window")
     try:
         out = _xdotool("search", "--name", keyword)

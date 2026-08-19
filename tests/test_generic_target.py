@@ -12,7 +12,7 @@ from tether.targets.generic import GenericTarget
 
 
 def test_stage_text_fails_cleanly_when_window_not_found(monkeypatch):
-    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: None)
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw, path_contains=None: None)
     t = GenericTarget("Cursor")
     result = t.stage_text("hello")
     assert not result.ok
@@ -20,7 +20,7 @@ def test_stage_text_fails_cleanly_when_window_not_found(monkeypatch):
 
 
 def test_stage_text_fails_cleanly_when_focus_fails(monkeypatch):
-    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw, path_contains=None: 123)
     monkeypatch.setattr(generic_mod, "focus_window", lambda hwnd: False)
     monkeypatch.setattr(generic_mod.pyperclip, "copy", lambda text: None)
     t = GenericTarget("Cursor")
@@ -30,7 +30,7 @@ def test_stage_text_fails_cleanly_when_focus_fails(monkeypatch):
 
 
 def test_stage_text_pastes_after_focusing(monkeypatch):
-    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw, path_contains=None: 123)
     monkeypatch.setattr(generic_mod, "focus_window", lambda hwnd: True)
     copied = []
     monkeypatch.setattr(generic_mod.pyperclip, "copy", lambda text: copied.append(text))
@@ -44,13 +44,13 @@ def test_stage_text_pastes_after_focusing(monkeypatch):
 
 
 def test_press_enter_requires_window_and_focus(monkeypatch):
-    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: None)
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw, path_contains=None: None)
     t = GenericTarget("Cursor")
     assert t.press_enter() is False
 
 
 def test_press_enter_sends_enter_key(monkeypatch):
-    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw, path_contains=None: 123)
     monkeypatch.setattr(generic_mod, "focus_window", lambda hwnd: True)
     presses = []
     monkeypatch.setattr(generic_mod.pyautogui, "press", lambda key: presses.append(key))
@@ -60,14 +60,14 @@ def test_press_enter_sends_enter_key(monkeypatch):
 
 
 def test_is_available_reflects_window_presence(monkeypatch):
-    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: None)
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw, path_contains=None: None)
     assert GenericTarget("Cursor").is_available() is False
-    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw, path_contains=None: 123)
     assert GenericTarget("Cursor").is_available() is True
 
 
 def test_stage_photo_fails_cleanly_when_clipboard_set_fails(monkeypatch):
-    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw, path_contains=None: 123)
     monkeypatch.setattr(generic_mod, "focus_window", lambda hwnd: True)
     monkeypatch.setattr(generic_mod, "set_clipboard_image", lambda b: False)
     t = GenericTarget("Cursor")
@@ -77,7 +77,7 @@ def test_stage_photo_fails_cleanly_when_clipboard_set_fails(monkeypatch):
 
 
 def test_stage_photo_pastes_caption_after_image(monkeypatch):
-    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw, path_contains=None: 123)
     monkeypatch.setattr(generic_mod, "focus_window", lambda hwnd: True)
     monkeypatch.setattr(generic_mod, "set_clipboard_image", lambda b: True)
     copied = []
@@ -97,7 +97,7 @@ def test_stage_photo_pastes_caption_after_image(monkeypatch):
 # percentage so it survives the window being moved/resized.
 
 def test_no_input_click_configured_never_clicks(monkeypatch):
-    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw, path_contains=None: 123)
     monkeypatch.setattr(generic_mod, "focus_window", lambda hwnd: True)
     monkeypatch.setattr(generic_mod.pyperclip, "copy", lambda text: None)
     monkeypatch.setattr(generic_mod.pyautogui, "hotkey", lambda *a: None)
@@ -109,11 +109,21 @@ def test_no_input_click_configured_never_clicks(monkeypatch):
 
 
 def test_input_click_converts_percentage_to_window_relative_coordinates(monkeypatch):
-    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw, path_contains=None: 123)
     monkeypatch.setattr(generic_mod, "focus_window", lambda hwnd: True)
     monkeypatch.setattr(generic_mod, "get_window_rect", lambda hwnd: (100, 200, 1100, 1200))  # 1000x1000
+    from PIL import Image
+    fake_img = Image.new("RGB", (1000, 1000))
+    monkeypatch.setattr(generic_mod, "capture_window", lambda hwnd: fake_img)
     monkeypatch.setattr(generic_mod.pyperclip, "copy", lambda text: None)
     monkeypatch.setattr(generic_mod.pyautogui, "hotkey", lambda *a: None)
+    ocr_calls = {"n": 0}
+
+    def fake_ocr_text(img):
+        ocr_calls["n"] += 1
+        return "before" if ocr_calls["n"] == 1 else "after"
+
+    monkeypatch.setattr(ocr_mod, "ocr_text", fake_ocr_text)
     clicks = []
     monkeypatch.setattr(generic_mod.pyautogui, "click", lambda x, y: clicks.append((x, y)))
     t = GenericTarget("Cursor", input_click=(0.9, 0.4))
@@ -122,7 +132,7 @@ def test_input_click_converts_percentage_to_window_relative_coordinates(monkeypa
 
 
 def test_input_click_also_applies_to_press_enter(monkeypatch):
-    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw, path_contains=None: 123)
     monkeypatch.setattr(generic_mod, "focus_window", lambda hwnd: True)
     monkeypatch.setattr(generic_mod, "get_window_rect", lambda hwnd: (0, 0, 1000, 1000))
     monkeypatch.setattr(generic_mod, "capture_window", lambda hwnd: None)
@@ -142,13 +152,13 @@ def test_input_click_also_applies_to_press_enter(monkeypatch):
 # dropdown applies here too, just against a dynamic (not fixed) list.
 
 def test_list_models_returns_empty_without_model_click_configured(monkeypatch):
-    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw, path_contains=None: 123)
     t = GenericTarget("Antigravity")  # no model_click
     assert t.list_models() == []
 
 
 def test_list_models_opens_dropdown_ocrs_and_closes_it(monkeypatch):
-    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw, path_contains=None: 123)
     monkeypatch.setattr(generic_mod, "focus_window", lambda hwnd: True)
     monkeypatch.setattr(generic_mod, "get_window_rect", lambda hwnd: (0, 0, 1000, 1000))
     monkeypatch.setattr(generic_mod, "capture_window", lambda hwnd: None)
@@ -175,7 +185,7 @@ def test_list_models_ignores_text_far_from_the_model_button(monkeypatch):
     window, so unscoped OCR would also pick up a file name, a menu label,
     anything else visible - and a substring search could then match and
     click something completely unrelated to the model picker."""
-    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw, path_contains=None: 123)
     monkeypatch.setattr(generic_mod, "focus_window", lambda hwnd: True)
     monkeypatch.setattr(generic_mod, "get_window_rect", lambda hwnd: (0, 0, 1000, 1000))
     monkeypatch.setattr(generic_mod, "capture_window", lambda hwnd: None)
@@ -191,7 +201,7 @@ def test_list_models_ignores_text_far_from_the_model_button(monkeypatch):
 
 
 def test_set_model_clicks_the_matching_line(monkeypatch):
-    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw, path_contains=None: 123)
     monkeypatch.setattr(generic_mod, "focus_window", lambda hwnd: True)
     monkeypatch.setattr(generic_mod, "get_window_rect", lambda hwnd: (0, 0, 1000, 1000))
     monkeypatch.setattr(generic_mod, "capture_window", lambda hwnd: None)
@@ -208,7 +218,7 @@ def test_set_model_clicks_the_matching_line(monkeypatch):
 
 
 def test_set_model_is_case_insensitive_substring_match(monkeypatch):
-    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw, path_contains=None: 123)
     monkeypatch.setattr(generic_mod, "focus_window", lambda hwnd: True)
     monkeypatch.setattr(generic_mod, "get_window_rect", lambda hwnd: (0, 0, 1000, 1000))
     monkeypatch.setattr(generic_mod, "capture_window", lambda hwnd: None)
@@ -219,7 +229,7 @@ def test_set_model_is_case_insensitive_substring_match(monkeypatch):
 
 
 def test_set_model_no_match_closes_dropdown_and_returns_none(monkeypatch):
-    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw, path_contains=None: 123)
     monkeypatch.setattr(generic_mod, "focus_window", lambda hwnd: True)
     monkeypatch.setattr(generic_mod, "get_window_rect", lambda hwnd: (0, 0, 1000, 1000))
     monkeypatch.setattr(generic_mod, "capture_window", lambda hwnd: None)
@@ -233,6 +243,99 @@ def test_set_model_no_match_closes_dropdown_and_returns_none(monkeypatch):
 
 
 def test_set_model_without_model_click_returns_none(monkeypatch):
-    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw: 123)
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw, path_contains=None: 123)
     t = GenericTarget("Antigravity")  # no model_click
     assert t.set_model("anything") is None
+
+
+# ---- path_filter: closes the same "browser tab outranks the real app"
+# bug ClaudeDesktopTarget already had a path filter for, extended here
+# to /target profiles (Cursor, Antigravity, anything else). ----
+
+def test_path_filter_is_threaded_into_window_lookup(monkeypatch):
+    captured = {}
+
+    def fake_find(kw, path_contains=None):
+        captured["kw"] = kw
+        captured["path_contains"] = path_contains
+        return None
+
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", fake_find)
+    GenericTarget("Cursor", path_filter="cursor\\Cursor.exe").is_available()
+
+    assert captured == {"kw": "Cursor", "path_contains": "cursor\\Cursor.exe"}
+
+
+def test_no_path_filter_passes_none_preserving_old_behavior(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(
+        generic_mod, "find_window_by_keyword",
+        lambda kw, path_contains=None: captured.setdefault("path_contains", path_contains),
+    )
+    GenericTarget("Cursor").is_available()
+    assert captured["path_contains"] is None
+
+
+# ---- stage_text verification: without this, a stale input_click (the
+# app's own layout shifted - a different tab/panel now sits at that
+# screen position) reported success unconditionally even though the
+# paste landed nowhere useful. ----
+
+def test_stage_text_with_input_click_detects_a_real_paste(monkeypatch):
+    from PIL import Image
+    fake_img = Image.new("RGB", (1000, 1000))
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw, path_contains=None: 123)
+    monkeypatch.setattr(generic_mod, "focus_window", lambda hwnd: True)
+    monkeypatch.setattr(generic_mod, "get_window_rect", lambda hwnd: (0, 0, 1000, 1000))
+    monkeypatch.setattr(generic_mod, "capture_window", lambda hwnd: fake_img)
+    monkeypatch.setattr(generic_mod.pyperclip, "copy", lambda text: None)
+    monkeypatch.setattr(generic_mod.pyautogui, "hotkey", lambda *a: None)
+    monkeypatch.setattr(generic_mod.pyautogui, "click", lambda x, y: None)
+    calls = {"n": 0}
+
+    def fake_ocr_text(img):
+        calls["n"] += 1
+        return "" if calls["n"] == 1 else "new text pasted"
+
+    monkeypatch.setattr(ocr_mod, "ocr_text", fake_ocr_text)
+
+    t = GenericTarget("Cursor", input_click=(0.5, 0.9))
+    result = t.stage_text("hello")
+    assert result.ok
+
+
+def test_stage_text_with_input_click_reports_failure_when_nothing_changed(monkeypatch):
+    """The real fix: a stale input_click that lands on, say, an unrelated
+    read-only panel would previously report success unconditionally."""
+    from PIL import Image
+    fake_img = Image.new("RGB", (1000, 1000))
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw, path_contains=None: 123)
+    monkeypatch.setattr(generic_mod, "focus_window", lambda hwnd: True)
+    monkeypatch.setattr(generic_mod, "get_window_rect", lambda hwnd: (0, 0, 1000, 1000))
+    monkeypatch.setattr(generic_mod, "capture_window", lambda hwnd: fake_img)
+    monkeypatch.setattr(generic_mod.pyperclip, "copy", lambda text: None)
+    monkeypatch.setattr(generic_mod.pyautogui, "hotkey", lambda *a: None)
+    monkeypatch.setattr(generic_mod.pyautogui, "click", lambda x, y: None)
+    monkeypatch.setattr(ocr_mod, "ocr_text", lambda img: "same text every time")
+
+    t = GenericTarget("Cursor", input_click=(0.5, 0.9))
+    result = t.stage_text("hello")
+    assert not result.ok
+    assert result.reason == "paste_not_detected"
+
+
+def test_stage_text_without_input_click_skips_verification_entirely(monkeypatch):
+    """The documented, already-disclosed fallback: no input_click means
+    no principled region to verify, so it just trusts focus like before -
+    this must keep working exactly as it did, not start failing."""
+    monkeypatch.setattr(generic_mod, "find_window_by_keyword", lambda kw, path_contains=None: 123)
+    monkeypatch.setattr(generic_mod, "focus_window", lambda hwnd: True)
+    monkeypatch.setattr(generic_mod.pyperclip, "copy", lambda text: None)
+    monkeypatch.setattr(generic_mod.pyautogui, "hotkey", lambda *a: None)
+    called_capture = []
+    monkeypatch.setattr(generic_mod, "capture_window", lambda hwnd: called_capture.append(1))
+
+    t = GenericTarget("Cursor")  # no input_click
+    result = t.stage_text("hello")
+    assert result.ok
+    assert called_capture == [], "no input_click means nothing to verify against - must not call capture_window at all"

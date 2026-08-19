@@ -43,11 +43,18 @@ def _osascript(script: str) -> str:
     return result.stdout.strip()
 
 
-def find_window_by_keyword(keyword: str) -> str | None:
+def find_window_by_keyword(keyword: str, path_contains: str | None = None) -> str | None:
     """Returns the owning process name of the first window whose title
     contains keyword, or None. That process name is the "handle" every
     other function here takes — macOS automation addresses apps/windows by
-    name, not by an opaque numeric id the way Win32/X11 do."""
+    name, not by an opaque numeric id the way Win32/X11 do.
+
+    `path_contains` is accepted for signature compatibility with the
+    Windows implementation (which uses it to reject a title match whose
+    owning process lives somewhere unexpected — e.g. a browser tab
+    outranking the real app purely by title) but not applied here yet:
+    doing this properly needs real Mac hardware to verify against, which
+    this project doesn't have (see the module-level "unverified" note)."""
     _require_macos("Finding a window")
     safe_keyword = keyword.replace('"', "")
     script = f'''

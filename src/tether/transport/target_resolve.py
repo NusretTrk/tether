@@ -29,4 +29,5 @@ def active_target(state):
     model_click = (model_click_cfg["x"], model_click_cfg["y"]) if model_click_cfg else None
     return GenericTarget(
         profile["window_keyword"], state.config.settings.preserve_user_clipboard, click, model_click,
+        path_filter=profile.get("window_path_filter"),
     )

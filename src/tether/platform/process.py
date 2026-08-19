@@ -62,6 +62,13 @@ def _process_path(pid: int) -> str | None:
         _kernel32.CloseHandle(handle)
 
 
+def path_for_pid(pid: int) -> str | None:
+    """Public wrapper around _process_path - used by platform/window.py to
+    filter window matches by their owning process's real path, the same
+    protection this module already applies to killing processes."""
+    return _process_path(pid)
+
+
 def list_processes(name_contains: str | None = None, path_contains: str | None = None) -> list[ProcessInfo]:
     """Processes matching both filters (case-insensitive substring match).
     Processes whose path can't be read - system processes, or anything

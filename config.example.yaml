@@ -89,6 +89,21 @@ activity_watch_enabled: true    # notify when a Running session goes Idle
 # practice. The values below were captured with a live conversation
 # already in progress, for exactly this reason.
 #
+# window_path_filter (optional, per profile) guards against a real bug:
+# find_window_by_keyword matches on window TITLE across every visible
+# window, then picks the largest by screen area - a maximized browser tab
+# titled "Cursor - AI code editor" or a webpage about Antigravity can
+# outrank the real app purely on size, silently becoming the target for
+# every click/paste/OCR call that follows (confirmed live: this is exactly
+# what breaks typing when an unrelated "Claude"/"Cursor"/"Antigravity"
+# browser tab happens to be open). Set this to a substring of the real
+# app's installed .exe path (check Task Manager -> right-click the process
+# -> Properties -> Location, or just its folder name) and window-matching
+# will reject any title match whose owning process doesn't live there.
+# Only narrows results when something actually matches it - a wrong or
+# outdated value falls back to plain title matching rather than breaking
+# a previously-working profile.
+#
 # model_click works the same way (window-relative x/y) for the /model
 # picker button - opens it, OCRs the visible option text, clicks whichever
 # line matches your /model argument. Only worth setting where the picker

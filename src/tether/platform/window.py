@@ -41,9 +41,29 @@ def _require_windows(feature: str) -> None:
         raise UnsupportedOnThisPlatform(feature)
 
 
-def find_window_by_keyword(keyword: str) -> int | None:
+def find_window_by_keyword(keyword: str, path_contains: str | None = None) -> int | None:
     """Picks the largest-area match — emulator/tool windows often have a side
-    toolbar that also matches the keyword; the real device screen is bigger."""
+    toolbar that also matches the keyword; the real device screen is bigger.
+
+    `path_contains`, when given, also requires the winning window's OWNING
+    PROCESS's executable path to contain that substring. Without this, any
+    window whose TITLE merely contains the keyword can win purely on
+    screen area — a maximized browser tab titled "Claude - talk to..." (or
+    a folder, a doc page, anything with "Cursor"/"Antigravity" in its
+    title) can outrank the real app and become the target for every
+    click/paste/OCR call that follows, with no error raised anywhere: the
+    window is real, it's just the wrong one. This is exactly the problem
+    process.py's own path-based filtering already solved for killing
+    processes (Claude Desktop and the separate Claude Code CLI share the
+    same claude.exe name) - window-finding needed the same protection and
+    never had it.
+
+    If path_contains eliminates every title match (e.g. the app is
+    installed somewhere the configured filter doesn't expect), falls back
+    to the unfiltered result rather than reporting "not found" for a
+    window that title-matched fine before - this can only ever narrow
+    results when it has positive evidence, never break a setup that
+    worked under title-matching alone."""
     _require_windows("Finding a window")
     matches: list[int] = []
 
@@ -57,6 +77,17 @@ def find_window_by_keyword(keyword: str) -> int | None:
     win32gui.EnumWindows(_enum_handler, None)
     if not matches:
         return None
+
+    if path_contains:
+        from tether.platform import process
+        filtered = []
+        for hwnd in matches:
+            _, pid = win32process.GetWindowThreadProcessId(hwnd)
+            path = process.path_for_pid(pid)
+            if path and path_contains.lower() in path.lower():
+                filtered.append(hwnd)
+        if filtered:
+            matches = filtered
 
     def _area(hwnd):
         left, top, right, bottom = win32gui.GetWindowRect(hwnd)

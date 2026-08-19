@@ -63,14 +63,22 @@ class GenericTarget:
         self, window_keyword: str, preserve_user_clipboard: bool = True,
         input_click: tuple[float, float] | None = None,
         model_click: tuple[float, float] | None = None,
+        path_filter: str | None = None,
     ):
         self.window_keyword = window_keyword
         self.preserve_user_clipboard = preserve_user_clipboard
         self.input_click = input_click  # (x_pct, y_pct) of window width/height, or None
         self.model_click = model_click  # (x_pct, y_pct) of the model-picker button, or None
+        # Optional substring the owning process's exe path must contain -
+        # a browser tab titled "Cursor - docs" or "Antigravity release
+        # notes" can otherwise outrank the real app purely on window area
+        # (see platform/window.py::find_window_by_keyword). Off by default
+        # since most profiles won't set it, matching how input_click/
+        # model_click are also opt-in per profile.
+        self.path_filter = path_filter
 
     def _hwnd(self):
-        return find_window_by_keyword(self.window_keyword)
+        return find_window_by_keyword(self.window_keyword, path_contains=self.path_filter)
 
     def _click_at(self, hwnd, pct: tuple[float, float]) -> None:
         left, top, right, bottom = get_window_rect(hwnd)
@@ -92,7 +100,36 @@ class GenericTarget:
         hwnd = self._hwnd()
         return bool(hwnd) and focus_window(hwnd)
 
+    def _crop_around_input(self, hwnd, img):
+        """A small window-relative box centered on input_click, for a
+        before/after OCR compare - the same "did the content actually
+        change" verification ClaudeDesktopTarget already has, applied
+        here for the first time. Only meaningful when input_click is
+        configured; without a known click point there's no principled
+        region to look at, so stage_text skips verification entirely in
+        that case rather than guessing at one (an already-disclosed
+        limitation of the focus-only fallback path, not new here)."""
+        left, top, right, bottom = get_window_rect(hwnd)
+        width, height = right - left, bottom - top
+        x_pct, y_pct = self.input_click
+        cx, cy = width * x_pct, height * y_pct
+        half_w, half_h = width * 0.22, height * 0.06
+        l = max(0, int(cx - half_w))
+        r = min(width, int(cx + half_w))
+        t = max(0, int(cy - half_h))
+        b = min(height, int(cy + half_h))
+        return img.crop((l, t, r, b))
+
     def stage_text(self, text: str) -> PasteResult:
+        """Pastes into whatever input_click points at (or whatever already
+        has focus, if input_click isn't configured - see the module
+        docstring for that fallback's real limitations). When input_click
+        IS set, verifies the paste actually landed there via a before/after
+        OCR compare of a small region around it - without this, a stale
+        input_click (the app's layout shifted: a different panel or tab is
+        now showing at that same screen position) would report success
+        unconditionally even though the text went nowhere useful, or
+        nowhere at all."""
         hwnd = self._hwnd()
         if not hwnd:
             return PasteResult(False, "window_not_found")
@@ -102,8 +139,20 @@ class GenericTarget:
                 return PasteResult(False, "focus_failed")
             time.sleep(0.2)
             self._click_input(hwnd)
+
+            if self.input_click is None:
+                pyautogui.hotkey("ctrl", "v")
+                time.sleep(0.2)
+                return PasteResult(True)
+
+            from tether.platform.ocr import ocr_text
+            before = ocr_text(self._crop_around_input(hwnd, capture_window(hwnd))).strip()
             pyautogui.hotkey("ctrl", "v")
             time.sleep(0.2)
+            after = ocr_text(self._crop_around_input(hwnd, capture_window(hwnd))).strip()
+
+        if after == before:
+            return PasteResult(False, "paste_not_detected")
         return PasteResult(True)
 
     def stage_photo(self, image_bytes: bytes, caption: str = "") -> PasteResult:
