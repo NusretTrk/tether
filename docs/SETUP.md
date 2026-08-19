@@ -189,6 +189,33 @@ python tools/notify.py "message text"
 
 ---
 
+## Uninstalling
+
+Two separate scripts, because they do different things and one of them
+touches packages that might be shared with other projects:
+
+```
+uninstall.bat
+```
+
+Stops tether (and its watchdog), removes the Startup shortcut, and asks
+whether to also delete `.env`/`config.yaml`/logs/`state/` — your bot token
+and settings. Leaves the project folder, your Python packages, and your
+BotFather bot alone. Delete the folder yourself if you want it gone
+entirely, and send `/revoke` to @BotFather if you want the token dead too.
+
+```
+uninstall_packages.bat
+```
+
+Lists everything in `requirements.txt` and asks before removing each one
+that's actually installed. There's no way to know which of these you
+already had installed for another project before tether — answer "n" for
+anything you want to keep. This is why it's a separate script and asks
+per-package rather than uninstall.bat just wiping them all.
+
+---
+
 ## Troubleshooting
 
 **Bot doesn't respond at all.** Check `tether.log`. The most common cause is
