@@ -68,6 +68,24 @@ is actually running on that OS — on Windows they sit on disk, unread.
   calibrated against a fresh panel quietly stops working. Cursor's model
   picker also turned out to be paywalled on a free account; Antigravity's
   wasn't.
+- **Reads Antigravity's replies back, too** — `/target antigravity` doesn't
+  just send messages into it, it tails Antigravity's own local
+  `transcript.jsonl` (same idea as Claude Code's own transcript, different
+  vocabulary) and relays its actual answers back through Telegram,
+  prefixed `[antigravity]` so it's never confused with the Claude relay
+  running in parallel. Cursor doesn't have this yet — its history lives in
+  an undocumented internal SQLite schema, not a plain transcript file.
+- **Telegram Mini App (optional)** — a real scrollable UI inside Telegram
+  (status, sessions, live transcript, settings) instead of nested button
+  menus, backed by your own free ngrok tunnel. Off by default; see
+  [docs/SETUP.md](docs/SETUP.md) for the one-time setup. The tunnel URL
+  itself is never treated as secret — every request has to carry a
+  Telegram-signed proof of who's asking, checked against your chat ID, the
+  same way everything else in this bot is gated.
+- **Crash-safe state** — a pending send, a staged message/photo, a staged
+  `/cmd`, or a pending `/shutdown` survive a crash or watchdog restart
+  instead of silently vanishing. `ask()` already did (its handoff was
+  file-based from the start).
 - **Fetch a file with `/files` and `/file`** — the agent writes a `.md`
   file mid-session and you're not at the machine to read it. `/files`
   lists recent ones as tap-to-fetch buttons; `/file <path>` grabs one
@@ -238,23 +256,33 @@ Two files, two purposes:
   window is touched, so a message can never become arbitrary desktop input.
 - Unauthorised chats get no reply at all. Answering would confirm the bot
   exists and let a stranger burn the account's rate limit.
+- **Mini App, if you turn it on**: the ngrok URL itself is not treated as
+  secret — a stranger who finds it gets an empty page and nothing else.
+  Every actual API request has to carry a Telegram-signed `initData` blob,
+  verified with the real HMAC-SHA256 algorithm Telegram documents, checked
+  for freshness, and checked against your one chat ID — nobody without
+  your bot token can forge one. Repeated bad signatures get locked out
+  (same mechanism as `/unlock`) and you get a one-time Telegram alert when
+  that trips, since it could be a stranger who found the URL rather than
+  you. Concurrent connections are capped, since an internet-reachable
+  server with no limit is a resource-exhaustion target. The ngrok
+  authtoken never appears on a command line (visible via Task Manager) —
+  it's handed to the subprocess through its own environment.
 
 ## What's not built yet
 
 Scoped out on purpose, not forgotten:
 
-- **Full Cursor/Antigravity/terminal control** — `/target` covers typing
-  and sending; reading their state (sessions, model, whatever they expose)
-  doesn't exist, since that would need each app's own accessibility
-  surface, not just window automation.
+- **Reading Cursor's state** — Antigravity's replies are read back now
+  (see above); Cursor's aren't, since its history lives in an undocumented
+  internal SQLite schema rather than a plain transcript file.
+- **Real macOS/Linux verification** — the window-control code there is
+  written against documented syntax, never run on real hardware.
 - **Voice** — interfaces are defined (`tether/voice/base.py`) for future
   ElevenLabs integration, not implemented.
 - **Remote MCP/skill editing.**
-- **Web dashboard** — would mean exposing this machine; Telegram avoids that.
-- **Watchdog for tether itself** — nothing currently notices if the bot
-  process dies.
-- **Crash-safe state** — pending sends, staged photos, and pending `ask()`
-  calls all live in memory; a restart mid-flow loses them.
+- **Cloud relay / Wake-on-LAN** — Telegram still needs the PC actually
+  running; there's no always-on relay that queues commands or wakes it.
 
 ## Development
 
@@ -263,7 +291,7 @@ pip install -r requirements-dev.txt
 pytest tests/ -v
 ```
 
-299 tests, almost all GUI-independent — they run on any machine, no Claude
+427 tests, almost all GUI-independent — they run on any machine, no Claude
 window or Windows accessibility stack required. (One skips without
 elevated/developer-mode permissions to create a symlink, which a couple of
 the file-security tests need.)

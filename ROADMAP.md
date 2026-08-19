@@ -67,6 +67,24 @@ forgotten — if it's not done, it's below with a reason.
   back fully live; a message where Enter was already pressed comes back as
   an honest "couldn't verify delivery" notice instead of faking a
   confirmation a fresh transcript tailer could never actually observe.
+- **Telegram Mini App** (optional, off by default) — real scrollable UI
+  inside Telegram: status, sessions, live transcript, settings, backed by
+  the user's own free ngrok static domain. Security is app-layer, not
+  URL-secrecy: every request needs a Telegram-signed `initData` blob
+  (real HMAC-SHA256, checked for freshness and against the one chat_id),
+  repeated bad signatures trip a lockout and a one-time alert, concurrent
+  connections are capped (an internet-facing stdlib server has no built-in
+  limit otherwise), and the ngrok authtoken never touches a command line.
+  The chat menu button is kept in sync with actual server state, not the
+  raw setting, so a misconfigured "enabled" flag never shows a button
+  pointing at a dead URL. `/start` re-syncs it on demand.
+- **Customizable everything, first slice** — the Mini App's own settings
+  screen now also covers the watcher toggles (dialog/stall/activity/
+  app-health), usage-limit auto-continue, clipboard preservation, and
+  three numeric thresholds (emergency temp, defer-while-active seconds,
+  auto-send-after-idle seconds), all editable live with real bounds
+  checking. Window keywords and poll intervals still need config.yaml —
+  not everything belongs on a quick toggle screen.
 
 ## Next (reliability)
 
@@ -79,20 +97,16 @@ forgotten — if it's not done, it's below with a reason.
 2. **Reading Cursor's state** — Antigravity's replies are read back now;
    Cursor's aren't, since its history lives in an undocumented internal
    SQLite schema rather than a plain transcript file.
-3. **Customizable everything** — more settings editable from Telegram
-   rather than config.yaml + restart. Keypad profiles (and now target
-   profiles) exist as the pattern; extend it to window keywords,
-   intervals, thresholds, watcher toggles.
+3. **Customizable everything, the rest** — window keywords, poll
+   intervals, and other config.yaml-only fields, if there's a real case
+   for editing them remotely rather than at setup time.
 
 ## After that (interface)
 
-4. **Telegram Mini App** — real UI inside Telegram: scrollable transcript,
-   session list, settings forms instead of nested button menus. Needs free
-   static hosting plus a tunnel to reach the PC.
-5. **Voice** — ElevenLabs for output, transcription for input. Interfaces
+4. **Voice** — ElevenLabs for output, transcription for input. Interfaces
    already defined in `voice/base.py`, nothing implemented. Telegram has
    no native speech either direction.
-6. **Cloud relay + Wake-on-LAN** — a small always-on instance so Telegram
+5. **Cloud relay + Wake-on-LAN** — a small always-on instance so Telegram
    still answers when the PC is off: reports offline, queues commands, can
    wake the machine. Constraint: only one process may poll a bot token, so
    the relay has to own polling and forward to the PC rather than run
