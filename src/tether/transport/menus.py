@@ -231,6 +231,15 @@ def recent_files_menu(root: Path, files: list[Path]) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(rows)
 
 
+def cmd_confirm_keyboard(_t) -> InlineKeyboardMarkup:
+    """/cmd runs arbitrary shell commands with the user's own privileges -
+    always confirmed, never automatic, same as restart/shutdown."""
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(_t("cmd_confirm_yes"), callback_data="cmd:confirm"),
+         InlineKeyboardButton(_t("staged_cancel"), callback_data="cmd:cancel")],
+    ])
+
+
 def shutdown_confirm_keyboard(_t) -> InlineKeyboardMarkup:
     """Shutting down ends the whole machine, not just Claude's session -
     always confirmed, never automatic."""

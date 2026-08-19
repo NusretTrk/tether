@@ -37,6 +37,8 @@
   "effort_set_failed": "Effort change failed — expected '{expected}', read '{actual}'.",
   "focus_failed": "Couldn't focus the window, aborted.",
   "cmd_usage": "Usage: /cmd <command>",
+  "cmd_confirm_prompt": "Run this command?\n\n{command}",
+  "cmd_confirm_yes": "▶️ Run",
   "cmd_output": "<pre>{output}</pre>",
   "cmd_no_output": "Command ran (no output).",
   "cmd_error": "Error:\n<pre>{error}</pre>",

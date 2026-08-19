@@ -293,19 +293,21 @@ async def cmd_effort(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @restricted
 async def cmd_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    _, _t = _ctx(context)
-    from tether.platform.shell import run_cmd
+    """Stages the command and asks for confirmation before running it.
+    This is the single most dangerous command in the bot - arbitrary shell
+    execution with the user's own privileges - and until now was the only
+    destructive action with no confirm step at all, unlike /restart or
+    /shutdown. Actual execution (and the HTML-escaped output rendering)
+    happens in callbacks.py on cmd:confirm."""
+    state, _t = _ctx(context)
     command = " ".join(context.args)
     if not command:
         await update.message.reply_text(_t("cmd_usage"))
         return
-    try:
-        output = await run_cmd(command)
-        if len(output) > 4000:
-            output = output[:4000] + "\n...(truncated)"
-        await update.message.reply_text(_t("cmd_output", output=output), parse_mode="Markdown")
-    except Exception as e:
-        await update.message.reply_text(_t("cmd_error", error=str(e)))
+    state.staged_cmd = command
+    await update.message.reply_text(
+        _t("cmd_confirm_prompt", command=command), reply_markup=menus.cmd_confirm_keyboard(_t),
+    )
 
 
 @restricted

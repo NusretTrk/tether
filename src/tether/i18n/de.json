@@ -37,6 +37,8 @@
   "effort_set_failed": "Effort-Änderung fehlgeschlagen — erwartet '{expected}', gelesen '{actual}'.",
   "focus_failed": "Fenster konnte nicht fokussiert werden, Vorgang abgebrochen.",
   "cmd_usage": "Verwendung: /cmd <Befehl>",
+  "cmd_confirm_prompt": "Diesen Befehl ausführen?\n\n{command}",
+  "cmd_confirm_yes": "▶️ Ausführen",
   "cmd_output": "<pre>{output}</pre>",
   "cmd_no_output": "Befehl ausgeführt (keine Ausgabe).",
   "cmd_error": "Fehler:\n<pre>{error}</pre>",

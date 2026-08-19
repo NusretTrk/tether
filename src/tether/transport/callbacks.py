@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import html
 import logging
 
 from telegram import Update
@@ -30,8 +31,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if category != "key":
         await query.answer()
 
-    async def edit(text: str, markup=None):
-        await query.edit_message_text(text, reply_markup=markup)
+    async def edit(text: str, markup=None, parse_mode=None):
+        await query.edit_message_text(text, reply_markup=markup, parse_mode=parse_mode)
 
     # ---- menu navigation ----
     if category == "menu":
@@ -257,6 +258,31 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 await edit(_t("app_restart_failed", reason=reason))
             return
+        return
+
+    # ---- /cmd confirmation ----
+    if category == "cmd":
+        action = parts[1]
+        if action == "cancel":
+            state.staged_cmd = None
+            await edit(_t("staged_cancelled"))
+            return
+        if action == "confirm":
+            command = state.staged_cmd
+            state.staged_cmd = None
+            if command is None:
+                await edit(_t("staged_cancelled"))
+                return
+            from tether.platform.cmd_audit import log_command
+            from tether.platform.shell import run_cmd
+            log_command(command)
+            try:
+                output = await run_cmd(command)
+                if len(output) > 4000:
+                    output = output[:4000] + "\n...(truncated)"
+                await edit(_t("cmd_output", output=html.escape(output)), parse_mode="HTML")
+            except Exception as e:
+                await edit(_t("cmd_error", error=html.escape(str(e))), parse_mode="HTML")
         return
 
     # ---- recent-file fetch (from /files) ----

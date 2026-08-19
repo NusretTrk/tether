@@ -207,7 +207,7 @@ class FakeQuery:
     async def answer(self, *a, **kw):
         self.answered = True
 
-    async def edit_message_text(self, text, reply_markup=None):
+    async def edit_message_text(self, text, reply_markup=None, parse_mode=None):
         self.edits.append(text)
 
 

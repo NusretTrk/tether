@@ -62,6 +62,10 @@ class AppState:
     # - set via /target. See transport/target_resolve.py.
     active_target_profile: str | None = None
 
+    # Awaiting confirmation from /cmd's inline keyboard. None once
+    # confirmed/cancelled.
+    staged_cmd: str | None = None
+
     # error signature -> monotonic time last forwarded to Telegram,
     # so a repeating fault doesn't flood the chat (see error_handler).
     error_notify_times: dict[str, float] = field(default_factory=dict)
