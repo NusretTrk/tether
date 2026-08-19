@@ -259,6 +259,25 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         return
 
+    # ---- recent-file fetch (from /files) ----
+    if category == "file":
+        action = parts[1]
+        if action == "send":
+            idx = int(parts[2])
+            if idx >= len(state.recent_files):
+                await edit(_t("file_not_found"))
+                return
+            path = state.recent_files[idx]
+            max_bytes = state.config.settings.remote_file_max_bytes
+            if not path.exists() or path.stat().st_size > max_bytes:
+                await edit(_t("file_not_found"))
+                return
+            from telegram import InputFile
+            await context.bot.send_document(
+                state.config.secrets.chat_id, InputFile(path.open("rb"), filename=path.name),
+            )
+        return
+
     # ---- shutdown timer ----
     if category == "shutdown":
         action = parts[1]

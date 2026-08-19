@@ -46,6 +46,10 @@ class AppState:
     # is tracked by Windows itself (`shutdown /a` to cancel), not here.
     pending_shutdown_minutes: float | None = None
 
+    # Last /files listing, indexed by the inline keyboard's callback_data
+    # (a full path doesn't fit in Telegram's 64-byte callback_data limit).
+    recent_files: list[Path] = field(default_factory=list)
+
     # error signature -> monotonic time last forwarded to Telegram,
     # so a repeating fault doesn't flood the chat (see error_handler).
     error_notify_times: dict[str, float] = field(default_factory=dict)

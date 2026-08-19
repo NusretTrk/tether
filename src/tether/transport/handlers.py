@@ -22,6 +22,20 @@ def _fmt_minutes(minutes: float) -> str:
     return str(int(minutes)) if minutes == int(minutes) else f"{minutes:g}"
 
 
+def _project_root(state):
+    """Directory of whatever Claude Code session tether is currently
+    tailing - read straight from the transcript's own `cwd` field rather
+    than trying to reverse the lossy filename-mangled slug it's stored
+    under. None if there's no active transcript yet, or it doesn't carry
+    a cwd (very old/malformed file)."""
+    from tether.sources.discovery import find_active_transcript
+    from tether.sources.files import read_project_cwd
+    transcript = find_active_transcript()
+    if transcript is None:
+        return None
+    return read_project_cwd(transcript)
+
+
 def restricted(handler):
     """Drops anything not from the configured chat id.
 
@@ -95,6 +109,65 @@ async def cmd_screen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     state, _t = _ctx(context)
     keyword = " ".join(context.args) or state.config.settings.claude_window_keyword
     await _send_screenshot(update, context, keyword, "custom", update.message.reply_text)
+
+
+@restricted
+async def cmd_files(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Lists recently-modified files (default: .md) in the active project,
+    as tap-to-fetch buttons - for grabbing something the agent just wrote
+    without needing to know its exact path."""
+    from tether.sources.files import list_recent_files
+
+    state, _t = _ctx(context)
+    root = _project_root(state)
+    if root is None:
+        await update.message.reply_text(_t("files_no_project"))
+        return
+
+    settings = state.config.settings
+    files = await asyncio.to_thread(
+        list_recent_files, root, tuple(settings.remote_file_extensions), settings.remote_file_list_limit,
+    )
+    if not files:
+        await update.message.reply_text(_t("files_none_found"))
+        return
+
+    state.recent_files = files
+    await update.message.reply_text(_t("files_title"), reply_markup=menus.recent_files_menu(root, files))
+
+
+@restricted
+async def cmd_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/file <path> - fetches one specific file by path, relative to the
+    active project's directory (or absolute, as long as it still resolves
+    inside it). See sources/files.py::resolve_safe_path for the actual
+    security boundary this relies on."""
+    from tether.sources.files import resolve_safe_path
+
+    state, _t = _ctx(context)
+    if not context.args:
+        await update.message.reply_text(_t("file_usage"))
+        return
+
+    root = _project_root(state)
+    if root is None:
+        await update.message.reply_text(_t("files_no_project"))
+        return
+
+    requested = " ".join(context.args)
+    resolved = await asyncio.to_thread(resolve_safe_path, root, requested)
+    if resolved is None:
+        await update.message.reply_text(_t("file_not_found"))
+        return
+
+    max_bytes = state.config.settings.remote_file_max_bytes
+    if resolved.stat().st_size > max_bytes:
+        await update.message.reply_text(_t("file_too_large", max_mb=max_bytes // 1_000_000))
+        return
+
+    await context.bot.send_document(
+        state.config.secrets.chat_id, InputFile(resolved.open("rb"), filename=resolved.name),
+    )
 
 
 @restricted

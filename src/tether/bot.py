@@ -27,6 +27,8 @@ BOT_COMMANDS = [
     BotCommand("menu", "Full command menu"),
     BotCommand("sessions", "List and switch sessions"),
     BotCommand("screen", "Screenshot a window"),
+    BotCommand("files", "List recent files in the active project"),
+    BotCommand("file", "Fetch one file by path"),
     BotCommand("model", "Switch model"),
     BotCommand("effort", "Switch effort"),
     BotCommand("cmd", "Run a PowerShell command"),
@@ -62,6 +64,8 @@ def _build_app(config: Config) -> Application:
     app.add_handler(CommandHandler("menu", handlers.cmd_menu))
     app.add_handler(CommandHandler("sessions", handlers.cmd_sessions))
     app.add_handler(CommandHandler(["screen", "screenshot"], handlers.cmd_screen))
+    app.add_handler(CommandHandler("files", handlers.cmd_files))
+    app.add_handler(CommandHandler("file", handlers.cmd_file))
     app.add_handler(CommandHandler("model", handlers.cmd_model))
     app.add_handler(CommandHandler("effort", handlers.cmd_effort))
     app.add_handler(CommandHandler("cmd", handlers.cmd_cmd))

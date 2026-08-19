@@ -5,6 +5,8 @@ the first colon rather than needing one handler per button.
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 
 from tether.config import SUPPORTED_LANGUAGES, OUTPUT_MODES
@@ -213,6 +215,20 @@ def restart_confirm_keyboard(_t) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(_t("app_restart_confirm_yes"), callback_data="app:restart"),
          InlineKeyboardButton(_t("staged_cancel"), callback_data="app:cancel")],
     ])
+
+
+def recent_files_menu(root: Path, files: list[Path]) -> InlineKeyboardMarkup:
+    """One button per file, labelled with its path relative to the project
+    root. Sends by index (file:send:<i>), not by path - a real path can
+    easily exceed Telegram's 64-byte callback_data limit."""
+    rows = []
+    for i, f in enumerate(files):
+        try:
+            label = str(f.relative_to(root))
+        except ValueError:
+            label = f.name
+        rows.append([InlineKeyboardButton(label[:60], callback_data=f"file:send:{i}")])
+    return InlineKeyboardMarkup(rows)
 
 
 def shutdown_confirm_keyboard(_t) -> InlineKeyboardMarkup:

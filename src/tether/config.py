@@ -97,6 +97,15 @@ class Settings:
     # sent if the scheduled delay is longer than this lead time.
     shutdown_warning_lead_sec: int = 60
 
+    # /file and /files - fetching a file the agent wrote mid-session (often
+    # a generated .md) without being at the machine. Scoped to the active
+    # project's directory only (see sources/files.py::resolve_safe_path) -
+    # this is convenience, not a new capability, since /cmd already allows
+    # arbitrary shell access to the same owner.
+    remote_file_extensions: list[str] = field(default_factory=lambda: [".md"])
+    remote_file_list_limit: int = 15
+    remote_file_max_bytes: int = 20_000_000
+
     stream_edit_throttle_sec: float = 2.5
     transcript_poll_interval_sec: float = 1.0
     uia_poll_interval_sec: float = 3.0
