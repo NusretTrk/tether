@@ -7,17 +7,23 @@ from __future__ import annotations
 
 import logging
 import time
+from datetime import datetime
 
 from telegram.ext import ContextTypes
 
 from tether.events import EventType
 from tether.i18n import make_translator
+from tether.monitors.usage_limit import parse_reset_time
+from tether.platform.capabilities import CAPABILITIES
 from tether.sources.discovery import find_active_transcript
 from tether.transport import menus
 from tether.transport.formatting import truncate_with_notice
 from tether.transport.streaming import make_streamer
 
 log = logging.getLogger(__name__)
+
+USAGE_LIMIT_CONTINUE_JOB_NAME = "usage_limit_continue"
+USAGE_LIMIT_CONTINUE_TEXT = "Continue, you were interrupted by usage limit."
 
 USAGE_LIMIT_KEYWORDS = (
     "usage limit reached",
@@ -171,6 +177,13 @@ async def transcript_job(context: ContextTypes.DEFAULT_TYPE) -> None:
             await state.live_streamer.push(state.live_buffer)
 
 
+def _cancel_scheduled_continue(context: ContextTypes.DEFAULT_TYPE, state) -> None:
+    for job in context.job_queue.get_jobs_by_name(USAGE_LIMIT_CONTINUE_JOB_NAME):
+        job.schedule_removal()
+    state.usage_limit_continue_scheduled = False
+    state.usage_limit_reset_at = None
+
+
 async def usage_limit_job(context: ContextTypes.DEFAULT_TYPE) -> None:
     """Scans recent transcript text for usage-limit phrasing — reading from
     the transcript instead of screen OCR means this works regardless of
@@ -178,24 +191,104 @@ async def usage_limit_job(context: ContextTypes.DEFAULT_TYPE) -> None:
     state = context.bot_data["state"]
     settings = state.config.settings
     _t = make_translator(settings.language)
+    chat_id = state.config.secrets.chat_id
 
     events, state.usage_limit_buffer = state.usage_limit_buffer, []
 
-    hit = any(any(k in e.text.lower() for k in USAGE_LIMIT_KEYWORDS) for e in events)
+    matching = [e for e in events if any(k in e.text.lower() for k in USAGE_LIMIT_KEYWORDS)]
+    hit = bool(matching)
 
     if hit:
         state.usage_limit_streak += 1
+        # Take the freshest parseable reading seen so far this streak —
+        # Claude's message may only fully render across a couple of polls.
+        for event in matching:
+            parsed = parse_reset_time(event.text, datetime.now())
+            if parsed is not None:
+                state.usage_limit_reset_at = parsed
     else:
+        if state.usage_limit_continue_scheduled:
+            # New real activity before the scheduled continue fired — the
+            # session resumed on its own (limit lifted early, or the user
+            # continued it themselves). The scheduled message would now be
+            # redundant at best, confusing at worst, so drop it.
+            _cancel_scheduled_continue(context, state)
+            await context.bot.send_message(chat_id, _t("usage_limit_resumed_on_own"))
         state.usage_limit_streak = 0
         state.usage_limit_alerted = False
+        state.usage_limit_reset_at = None
 
     if state.usage_limit_streak >= settings.usage_limit_confirm_streak and not state.usage_limit_alerted:
-        minutes = (settings.usage_limit_check_interval_sec * state.usage_limit_streak) // 60
-        await context.bot.send_message(
-            state.config.secrets.chat_id,
-            _t("usage_limit_alert", minutes=minutes, streak=state.usage_limit_streak),
-        )
         state.usage_limit_alerted = True
+        reset_at = state.usage_limit_reset_at
+
+        can_schedule = (
+            settings.usage_limit_continue_enabled
+            and reset_at is not None
+            and CAPABILITIES.window_control
+            and state.usage_limit_continue.can_schedule(time.monotonic())
+        )
+        if can_schedule:
+            delay = (reset_at - datetime.now()).total_seconds() + settings.usage_limit_continue_delay_sec
+            context.job_queue.run_once(usage_limit_continue_job, when=max(delay, 1), name=USAGE_LIMIT_CONTINUE_JOB_NAME)
+            state.usage_limit_continue_scheduled = True
+            state.usage_limit_continue.record_attempt(time.monotonic())
+            await context.bot.send_message(
+                chat_id,
+                _t("usage_limit_alert_continuing", reset_time=reset_at.strftime("%H:%M"),
+                   delay=settings.usage_limit_continue_delay_sec),
+            )
+        elif settings.usage_limit_continue_enabled and reset_at is None:
+            await context.bot.send_message(chat_id, _t("usage_limit_alert_no_reset_time"))
+        else:
+            await context.bot.send_message(
+                chat_id, _t("usage_limit_alert", streak=state.usage_limit_streak),
+            )
+
+
+async def usage_limit_continue_job(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Fires once, settings.usage_limit_continue_delay_sec after the parsed
+    reset time. Reuses the same staged-send path every other outbound
+    message goes through (including the presence check), so it never steals
+    focus from someone who came back to the keyboard right at reset time —
+    it defers exactly like a normal remote message would."""
+    import asyncio
+
+    from tether.platform.presence import is_user_active
+
+    state = context.bot_data["state"]
+    settings = state.config.settings
+    _t = make_translator(settings.language)
+    chat_id = state.config.secrets.chat_id
+
+    state.usage_limit_continue_scheduled = False
+    state.usage_limit_reset_at = None
+
+    threshold = settings.defer_when_user_active_sec
+    if await asyncio.to_thread(is_user_active, threshold):
+        state.deferred_text = USAGE_LIMIT_CONTINUE_TEXT
+        state.deferred_photo_bytes = None
+        state.deferred_caption = ""
+        await context.bot.send_message(chat_id, _t("usage_limit_continue_deferred"))
+        return
+
+    result = await asyncio.to_thread(state.target.stage_text, USAGE_LIMIT_CONTINUE_TEXT)
+    if not result.ok:
+        await context.bot.send_message(chat_id, _t("usage_limit_continue_failed", error=result.reason))
+        return
+
+    ok = await asyncio.to_thread(state.target.press_enter)
+    if not ok:
+        await context.bot.send_message(chat_id, _t("usage_limit_continue_failed", error="focus_failed"))
+        return
+
+    state.pending_send_text = USAGE_LIMIT_CONTINUE_TEXT
+    state.pending_send_kind = "text"
+    state.pending_send_since = time.monotonic()
+    state.usage_limit_streak = 0
+    state.usage_limit_alerted = False
+
+    await context.bot.send_message(chat_id, _t("usage_limit_continuing"))
 
 
 async def temp_monitor_job(context: ContextTypes.DEFAULT_TYPE) -> None:

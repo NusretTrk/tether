@@ -82,6 +82,16 @@ class Settings:
     usage_limit_check_interval_sec: int = 300
     usage_limit_confirm_streak: int = 3
 
+    # After the usage limit is confirmed hit, if a reset time can be parsed
+    # from Claude's own message, wait until that time plus this many extra
+    # seconds (a safety margin, in case the reset lands a little late) and
+    # then automatically send a message to resume the session. Turning this
+    # off still reports that the limit was hit, it just never auto-resumes.
+    usage_limit_continue_enabled: bool = True
+    usage_limit_continue_delay_sec: int = 60
+    usage_limit_continue_max_attempts: int = 3
+    usage_limit_continue_attempt_window_sec: int = 21600
+
     stream_edit_throttle_sec: float = 2.5
     transcript_poll_interval_sec: float = 1.0
     uia_poll_interval_sec: float = 3.0

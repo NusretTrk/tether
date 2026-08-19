@@ -16,6 +16,15 @@ temp_emergency_c: 90            # push an immediate alert at/above this temperat
 usage_limit_check_interval_sec: 300
 usage_limit_confirm_streak: 3   # consecutive detections required before alerting (filters OCR flicker)
 
+# If Claude's usage-limit message gives a reset time, tether waits until then
+# (plus the delay below, as a safety margin) and automatically sends a
+# message to resume the session. Set to false to only be notified, never
+# auto-resumed.
+usage_limit_continue_enabled: true
+usage_limit_continue_delay_sec: 60
+usage_limit_continue_max_attempts: 3          # per attempt window, caps a bad-parse retry loop
+usage_limit_continue_attempt_window_sec: 21600
+
 stream_edit_throttle_sec: 2.5   # minimum seconds between message edits while streaming
 transcript_poll_interval_sec: 1.0
 uia_poll_interval_sec: 3.0
