@@ -1,13 +1,21 @@
 """
-Byte-precise incremental tailer for a Claude Code transcript JSONL file.
-Binary mode throughout — text-mode seek/tell is unreliable across multi-byte
-UTF-8 characters and Windows line endings, so offsets are tracked in bytes.
+Byte-precise incremental tailer for a JSONL transcript file. Binary mode
+throughout — text-mode seek/tell is unreliable across multi-byte UTF-8
+characters and Windows line endings, so offsets are tracked in bytes.
+
+Built for Claude Code's transcript format (parse_line, the default), but
+the line-parsing function is a constructor parameter rather than hardcoded
+- Antigravity's own transcript.jsonl is JSONL too, just a different `type`
+vocabulary, so it reuses this exact tailer with
+antigravity_events.parse_antigravity_line instead of writing a second,
+near-identical incremental-read implementation.
 """
 from __future__ import annotations
 
 import json
 import logging
 from pathlib import Path
+from typing import Callable
 
 from tether.events import Event, parse_line
 
@@ -15,8 +23,9 @@ log = logging.getLogger(__name__)
 
 
 class TranscriptTailer:
-    def __init__(self, path: Path, from_start: bool = False):
+    def __init__(self, path: Path, from_start: bool = False, parse_line: Callable[[dict], list[Event]] = parse_line):
         self.path = Path(path)
+        self._parse_line = parse_line
         try:
             self._offset = 0 if from_start else self.path.stat().st_size
         except FileNotFoundError:
@@ -57,5 +66,5 @@ class TranscriptTailer:
             except (json.JSONDecodeError, UnicodeDecodeError) as e:
                 log.warning("skipping malformed transcript line in %s: %s", self.path, e)
                 continue
-            events.extend(parse_line(obj))
+            events.extend(self._parse_line(obj))
         return events

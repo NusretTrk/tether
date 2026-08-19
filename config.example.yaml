@@ -112,6 +112,14 @@ activity_watch_enabled: true    # notify when a Running session goes Idle
 #     model_click:
 #       x: 0.9014
 #       y: 0.943
+#     # Antigravity keeps its own transcript.jsonl locally, the same idea
+#     # as Claude Code's - confirmed live, not assumed. Setting this makes
+#     # tether tail it and relay Antigravity's actual replies back to you,
+#     # the same way it already does for Claude. Prefixed with "[antigravity]"
+#     # in chat so it's never confused with the Claude relay. No equivalent
+#     # exists for Cursor yet - its history lives in an internal SQLite
+#     # schema that isn't public/stable enough to build against confidently.
+#     transcript_source: antigravity
 #     keys:
 #       Accept: tab
 #       Reject: escape

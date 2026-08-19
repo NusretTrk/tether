@@ -17,7 +17,7 @@ from tether.transport.state import AppState
 from tether.transport.text import handle_photo, handle_text
 from tether.transport.jobs import (
     activity_job, app_health_job, deferred_send_job, dialog_job, stall_job,
-    temp_monitor_job, transcript_job, usage_limit_job,
+    target_transcript_job, temp_monitor_job, transcript_job, usage_limit_job,
 )
 
 log = logging.getLogger(__name__)
@@ -95,6 +95,7 @@ def _build_app(config: Config) -> Application:
 
     settings = config.settings
     app.job_queue.run_repeating(transcript_job, interval=settings.transcript_poll_interval_sec, first=5)
+    app.job_queue.run_repeating(target_transcript_job, interval=settings.transcript_poll_interval_sec, first=6)
     app.job_queue.run_repeating(usage_limit_job, interval=settings.usage_limit_check_interval_sec, first=20)
     app.job_queue.run_repeating(temp_monitor_job, interval=settings.temp_check_interval_sec, first=10)
     # Session and dialog watching read the OS accessibility tree, which only

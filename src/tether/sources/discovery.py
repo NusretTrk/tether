@@ -25,3 +25,25 @@ def find_active_transcript(root: Path | None = None) -> Path | None:
     if not candidates:
         return None
     return max(candidates, key=lambda p: p.stat().st_mtime)
+
+
+def default_antigravity_root() -> Path:
+    return Path.home() / ".gemini"
+
+
+def find_active_antigravity_transcript(root: Path | None = None) -> Path | None:
+    """Same freshest-file idea as find_active_transcript, for Antigravity's
+    own per-conversation transcript. `*` in the glob covers both
+    ~/.gemini/antigravity/ and ~/.gemini/antigravity-ide/ (older and
+    current product directory names seen in the wild) without hardcoding
+    either - whichever one actually has a fresh transcript wins."""
+    root = root or default_antigravity_root()
+    if not root.exists():
+        return None
+    candidates = [
+        p for p in root.glob("*/brain/*/.system_generated/logs/transcript.jsonl")
+        if p.is_file()
+    ]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda p: p.stat().st_mtime)

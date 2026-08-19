@@ -524,3 +524,63 @@ async def shutdown_warning_job(context: ContextTypes.DEFAULT_TYPE) -> None:
     state = context.bot_data["state"]
     _t = make_translator(state.config.settings.language)
     await context.bot.send_message(state.config.secrets.chat_id, _t("shutdown_warning"))
+
+
+TARGET_TRANSCRIPT_RECHECK_EVERY = 10  # re-run discovery every N polls, matching transcript_job
+
+
+async def target_transcript_job(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Tails whatever /target-selected app's own transcript, when the
+    active profile has a known transcript_source configured - currently
+    just "antigravity", which turned out to keep a local transcript.jsonl
+    the same way Claude Code does (see sources/antigravity_events.py for
+    where that was confirmed, not assumed). This is the actual mechanism
+    behind "read {target}'s replies back": completely independent of
+    transcript_job above, which always tails Claude's own transcript
+    regardless of what /target currently points at - switching targets
+    never affects the Claude relay, and this job is a no-op whenever no
+    profile with a transcript_source is active.
+    """
+    state = context.bot_data["state"]
+    settings = state.config.settings
+    name = state.active_target_profile
+    if not name:
+        return
+    profile = settings.keypad_profiles.get(name, {})
+    source = profile.get("transcript_source")
+    if source != "antigravity":
+        return
+
+    from tether.sources.antigravity_events import parse_antigravity_line
+    from tether.sources.discovery import find_active_antigravity_transcript
+    from tether.sources.transcript import TranscriptTailer
+
+    state.target_transcript_poll_count += 1
+    if state.target_tailer is None or state.target_transcript_poll_count % TARGET_TRANSCRIPT_RECHECK_EVERY == 0:
+        active = find_active_antigravity_transcript()
+        if active and active != state.target_tailer_path:
+            log.info("switching tailed target transcript to %s", active)
+            state.target_tailer = TranscriptTailer(active, from_start=False, parse_line=parse_antigravity_line)
+            state.target_tailer_path = active
+
+    if state.target_tailer is None:
+        return
+
+    events = state.target_tailer.poll()
+    if not events:
+        return
+
+    mode = settings.output_mode
+    if mode == "quiet":
+        return
+
+    chat_id = state.config.secrets.chat_id
+    for event in events:
+        if event.type == EventType.ASSISTANT_TEXT and event.text.strip():
+            await context.bot.send_message(chat_id, f"[{name}] {truncate_with_notice(event.text, 4000, '…')}")
+        elif mode in ("verbose", "live") and event.type == EventType.TOOL_RESULT:
+            icon = "❌" if event.is_error else "→"
+            summary = event.tool_name or "tool"
+            await context.bot.send_message(
+                chat_id, f"[{name}] {icon} {summary}: {truncate_with_notice(event.text, 1500, '…')}",
+            )

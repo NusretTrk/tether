@@ -28,6 +28,15 @@ class AppState:
     tailer: TranscriptTailer | None = None
     tailer_path: Path | None = None
     transcript_poll_count: int = 0
+
+    # Tails whatever /target-selected app's own transcript, when the active
+    # profile has a known transcript_source configured (currently just
+    # "antigravity"). Entirely separate from tailer/tailer_path above,
+    # which is always Claude Code's - the two run independently so
+    # watching a routed app's replies never affects the Claude relay.
+    target_tailer: TranscriptTailer | None = None
+    target_tailer_path: Path | None = None
+    target_transcript_poll_count: int = 0
     last_event_time: float = field(default_factory=time.monotonic)
 
     live_streamer: object | None = None
