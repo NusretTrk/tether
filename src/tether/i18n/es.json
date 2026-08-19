@@ -84,6 +84,8 @@
   "mode_verbose": "📢 Detallado — todo, incluidas las llamadas a herramientas",
   "mode_set": "Modo de salida cambiado a {mode}.",
   "confirm_prompt": "La confirmación antes de enviar está actualmente {state}.",
+  "settings_confirm_label": "Confirmación",
+  "settings_miniapp_label": "Mini App",
   "confirm_on": "activada",
   "confirm_off": "desactivada",
   "confirm_set": "Confirmación antes de enviar: {state}.",

@@ -84,6 +84,8 @@
   "mode_verbose": "📢 Verbose — everything, including tool calls",
   "mode_set": "Output mode set to {mode}.",
   "confirm_prompt": "Confirm before sending is currently {state}.",
+  "settings_confirm_label": "Confirm",
+  "settings_miniapp_label": "Mini App",
   "confirm_on": "on",
   "confirm_off": "off",
   "confirm_set": "Confirm before sending: {state}.",

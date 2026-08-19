@@ -101,8 +101,8 @@ def settings_menu(_t) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🌐 " + _t("language_prompt"), callback_data="lang:menu")],
         [InlineKeyboardButton("📡 " + _t("mode_prompt"), callback_data="mode:menu")],
-        [InlineKeyboardButton("✅ " + _t("confirm_prompt").split(" ")[0], callback_data="confirm:menu")],
-        [InlineKeyboardButton("🚀 " + _t("miniapp_prompt").split(":")[0], callback_data="miniapp:menu")],
+        [InlineKeyboardButton("✅ " + _t("settings_confirm_label"), callback_data="confirm:menu")],
+        [InlineKeyboardButton("🚀 " + _t("settings_miniapp_label"), callback_data="miniapp:menu")],
         [back_button(_t)],
     ])
 

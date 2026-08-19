@@ -84,6 +84,8 @@
   "mode_verbose": "📢 Ausführlich — alles, inklusive Tool-Aufrufe",
   "mode_set": "Ausgabemodus auf {mode} gesetzt.",
   "confirm_prompt": "Sendebestätigung ist derzeit {state}.",
+  "settings_confirm_label": "Bestätigung",
+  "settings_miniapp_label": "Mini-App",
   "confirm_on": "an",
   "confirm_off": "aus",
   "confirm_set": "Sendebestätigung: {state}.",

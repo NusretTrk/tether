@@ -84,6 +84,8 @@
   "mode_verbose": "📢 Ayrıntılı — araç çağrıları dahil her şey",
   "mode_set": "Çıktı modu {mode} olarak ayarlandı.",
   "confirm_prompt": "Gönderim öncesi onay şu an {state}.",
+  "settings_confirm_label": "Onay",
+  "settings_miniapp_label": "Mini Uygulama",
   "confirm_on": "açık",
   "confirm_off": "kapalı",
   "confirm_set": "Gönderim öncesi onay: {state}.",
