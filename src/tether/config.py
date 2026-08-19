@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from dataclasses import dataclass, field, fields, asdict
 from pathlib import Path
 
@@ -253,6 +254,21 @@ class Settings:
     mini_app_ngrok_domain: str = ""
     # Assumes ngrok is on PATH; override with a full path if not.
     mini_app_ngrok_path: str = "ngrok"
+
+    def __post_init__(self) -> None:
+        # config.yaml is documented as hand-editable, and ngrok's own
+        # dashboard displays domains WITH the https:// prefix - copying
+        # straight from there is a completely reasonable thing to do, so
+        # this needs to tolerate it rather than pass a broken value
+        # through to both the actual `ngrok http --domain=...` command
+        # (runner.py, which wants a bare hostname) and the menu button
+        # URL (menu_button.py, which would otherwise end up with a
+        # doubled https://https://). One choke point here instead of
+        # normalizing at every read site.
+        domain = self.mini_app_ngrok_domain.strip()
+        if domain:
+            domain = re.sub(r"^https?://", "", domain, flags=re.IGNORECASE).rstrip("/")
+        self.mini_app_ngrok_domain = domain
 
     def validate(self) -> list[str]:
         """Returns a list of problems found (empty = all good). Does not raise —

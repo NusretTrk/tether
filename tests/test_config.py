@@ -8,6 +8,47 @@ def test_defaults_are_valid():
     assert Settings().validate() == []
 
 
+# ---- mini_app_ngrok_domain normalization (__post_init__) ----
+# config.yaml is hand-editable, and ngrok's own dashboard displays
+# domains WITH the https:// prefix - a straight copy-paste from there
+# must not silently produce a broken URL later (menu_button.py) or a
+# broken `ngrok http --domain=...` command (runner.py).
+
+def test_domain_with_https_prefix_is_stripped():
+    assert Settings(mini_app_ngrok_domain="https://foo.ngrok-free.app").mini_app_ngrok_domain == "foo.ngrok-free.app"
+
+
+def test_domain_with_http_prefix_is_stripped():
+    assert Settings(mini_app_ngrok_domain="http://foo.ngrok-free.app").mini_app_ngrok_domain == "foo.ngrok-free.app"
+
+
+def test_domain_with_trailing_slash_is_stripped():
+    assert Settings(mini_app_ngrok_domain="foo.ngrok-free.app/").mini_app_ngrok_domain == "foo.ngrok-free.app"
+
+
+def test_domain_with_surrounding_whitespace_is_trimmed():
+    assert Settings(mini_app_ngrok_domain="  foo.ngrok-free.app  ").mini_app_ngrok_domain == "foo.ngrok-free.app"
+
+
+def test_empty_domain_stays_empty():
+    assert Settings(mini_app_ngrok_domain="").mini_app_ngrok_domain == ""
+
+
+def test_already_clean_domain_is_unchanged():
+    assert Settings(mini_app_ngrok_domain="foo.ngrok-free.app").mini_app_ngrok_domain == "foo.ngrok-free.app"
+
+
+def test_domain_normalization_survives_a_full_load_from_disk(tmp_path, monkeypatch):
+    import tether.config as config_mod
+    path = tmp_path / "config.yaml"
+    path.write_text("mini_app_ngrok_domain: 'https://foo.ngrok-free.app/'\n", encoding="utf-8")
+    monkeypatch.setattr(config_mod, "CONFIG_PATH", path)
+    monkeypatch.setattr(config_mod, "CONFIG_EXAMPLE_PATH", path)
+
+    loaded = config_mod.Settings.load()
+    assert loaded.mini_app_ngrok_domain == "foo.ngrok-free.app"
+
+
 def test_invalid_language_falls_back(tmp_path, monkeypatch):
     import tether.config as config_mod
     path = tmp_path / "config.yaml"
