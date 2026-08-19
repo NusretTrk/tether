@@ -83,6 +83,7 @@ class FakeState:
     pending_send_kind: str = "text"
     pending_send_message_id: int | None = None
     pending_send_since: float = 0.0
+    active_target_profile: str | None = None
 
 
 class FakeContext:
@@ -137,3 +138,41 @@ def test_deliver_deferred_with_nothing_held_is_a_noop():
     ok, reason = asyncio.run(text_mod.deliver_deferred(context, state, lambda k, **kw: k))
     assert not ok
     assert reason == "nothing_deferred"
+
+
+def test_message_goes_to_the_selected_target_not_claude(monkeypatch):
+    """/target routes plain messages elsewhere - the Claude-Desktop
+    FakeTarget must never be touched once a profile is selected, and the
+    ground-truth pending_send_* state (meaningless for a generic target)
+    must not be set either."""
+    monkeypatch.setattr(text_mod, "is_user_active", lambda threshold: False)
+
+    class FakeGenericTarget:
+        def __init__(self, keyword, preserve):
+            self.staged_texts = []
+            self.enter_presses = 0
+
+        def stage_text(self, t):
+            self.staged_texts.append(t)
+            from tether.targets.base import PasteResult
+            return PasteResult(True)
+
+        def press_enter(self):
+            self.enter_presses += 1
+            return True
+
+    generic = FakeGenericTarget("Cursor", True)
+    monkeypatch.setattr("tether.targets.generic.GenericTarget", lambda kw, preserve: generic)
+    monkeypatch.setattr(FakeSettings, "keypad_profiles", {"cursor": {"window_keyword": "Cursor"}}, raising=False)
+    monkeypatch.setattr(FakeSettings, "preserve_user_clipboard", True, raising=False)
+
+    update = FakeUpdate("do the thing")
+    context = FakeContext()
+    state = context.bot_data["state"]
+    state.active_target_profile = "cursor"
+
+    asyncio.run(text_mod.handle_text(update, context))
+
+    assert generic.staged_texts == ["do the thing"]
+    assert state.target.staged_texts == [], "message went to Claude Desktop instead of the selected target"
+    assert state.pending_send_text is None, "ground-truth tracking doesn't apply to a generic target"

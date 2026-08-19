@@ -408,6 +408,40 @@ async def cmd_shutdown(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 @restricted
+async def cmd_target(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/target [name] - which app plain text/photo messages get routed to.
+    Reuses settings.keypad_profiles (already used by /keys <name> for key
+    presses) rather than a second parallel config structure - a profile
+    already names an app + window_keyword, which is exactly what a generic
+    text target needs too."""
+    state, _t = _ctx(context)
+    profiles = state.config.settings.keypad_profiles
+
+    if not context.args:
+        current = state.active_target_profile or "claude"
+        await update.message.reply_text(
+            _t("target_current", current=current, options=", ".join(["claude", *profiles]) or "claude")
+        )
+        return
+
+    name = context.args[0].lower()
+    if name in ("claude", "none", "default"):
+        state.active_target_profile = None
+        await update.message.reply_text(_t("target_reset"))
+        return
+
+    profile = profiles.get(name)
+    if not profile or not profile.get("window_keyword"):
+        await update.message.reply_text(
+            _t("target_unknown", name=name, options=", ".join(["claude", *profiles]) or "claude")
+        )
+        return
+
+    state.active_target_profile = name
+    await update.message.reply_text(_t("target_set", name=name))
+
+
+@restricted
 async def cmd_launch(update: Update, context: ContextTypes.DEFAULT_TYPE):
     state, _t = _ctx(context)
     if await asyncio.to_thread(state.target.is_app_running):

@@ -310,6 +310,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ---- staged send (confirm-before-send flow) ----
     if category == "staged":
+        from tether.transport.target_resolve import active_target
+        target = active_target(state)
         action = parts[1]
         if action == "send":
             if state.staged_text is None and not state.staged_photo:
@@ -317,27 +319,30 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
             pending_text = state.staged_text
             was_photo = state.staged_photo
-            ok = await asyncio.to_thread(state.target.press_enter)
+            ok = await asyncio.to_thread(target.press_enter)
             state.staged_text = None
             state.staged_photo = False
             if not ok:
                 await edit(_t("focus_failed"))
                 return
-            await edit("…")
-            import time
-            state.pending_send_text = pending_text
-            state.pending_send_kind = "image" if was_photo else "text"
-            state.pending_send_message_id = query.message.message_id
-            state.pending_send_since = time.monotonic()
+            if target is state.target:
+                await edit("…")
+                import time
+                state.pending_send_text = pending_text
+                state.pending_send_kind = "image" if was_photo else "text"
+                state.pending_send_message_id = query.message.message_id
+                state.pending_send_since = time.monotonic()
+            else:
+                await edit(_t("staged_sent_unverified"))
         elif action == "edit":
             state.staged_text = None
             state.staged_photo = False
-            await asyncio.to_thread(state.target.clear_input)
+            await asyncio.to_thread(target.clear_input)
             await edit(_t("staged_edit_prompt"))
         elif action == "cancel":
             state.staged_text = None
             state.staged_photo = False
-            await asyncio.to_thread(state.target.clear_input)
+            await asyncio.to_thread(target.clear_input)
             await edit(_t("staged_cancelled"))
         return
 

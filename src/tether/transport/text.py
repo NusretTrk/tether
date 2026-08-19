@@ -20,6 +20,7 @@ from tether.transport import menus
 from tether.transport.handlers import (
     cmd_keys, cmd_menu, cmd_screen, cmd_sessions, cmd_status, cmd_stop, restricted, _send_screenshot,
 )
+from tether.transport.target_resolve import active_target
 
 # The original bot treated a plain "1", "y", "Enter" etc typed as a message
 # as a keypress shortcut, not literal chat text — sending "1" answered a
@@ -125,7 +126,8 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         state.deferred_message_id = msg.message_id
         return
 
-    result = await asyncio.to_thread(state.target.stage_text, text)
+    target = active_target(state)
+    result = await asyncio.to_thread(target.stage_text, text)
     if not result.ok:
         reason_key = {
             "window_not_found": "claude_not_found",
@@ -141,15 +143,22 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    ok = await asyncio.to_thread(state.target.press_enter)
+    ok = await asyncio.to_thread(target.press_enter)
     if not ok:
         await update.message.reply_text(_t("focus_failed"))
         return
 
-    sent_msg = await update.message.reply_text("…")
-    state.pending_send_text = text
-    state.pending_send_message_id = sent_msg.message_id
-    state.pending_send_since = time.monotonic()
+    # Ground-truth confirmation (below) only works for Claude Desktop - it
+    # watches the Claude transcript for a matching event, which a message
+    # sent to a /target-selected app would never produce, so it would
+    # falsely report "failed" after the 10s timeout for every other target.
+    if target is state.target:
+        sent_msg = await update.message.reply_text("…")
+        state.pending_send_text = text
+        state.pending_send_message_id = sent_msg.message_id
+        state.pending_send_since = time.monotonic()
+    else:
+        await update.message.reply_text(_t("staged_sent_unverified"))
 
 
 @restricted
@@ -179,7 +188,8 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         state.deferred_message_id = msg.message_id
         return
 
-    result = await asyncio.to_thread(state.target.stage_photo, image_bytes, caption)
+    target = active_target(state)
+    result = await asyncio.to_thread(target.stage_photo, image_bytes, caption)
     if not result.ok:
         reason_key = {
             "window_not_found": "claude_not_found",
@@ -196,16 +206,19 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(prompt, reply_markup=menus.staged_message_keyboard(_t))
         return
 
-    ok = await asyncio.to_thread(state.target.press_enter)
+    ok = await asyncio.to_thread(target.press_enter)
     if not ok:
         await update.message.reply_text(_t("focus_failed"))
         return
 
-    sent_msg = await update.message.reply_text("…")
-    state.pending_send_text = None
-    state.pending_send_kind = "image"
-    state.pending_send_message_id = sent_msg.message_id
-    state.pending_send_since = time.monotonic()
+    if target is state.target:
+        sent_msg = await update.message.reply_text("…")
+        state.pending_send_text = None
+        state.pending_send_kind = "image"
+        state.pending_send_message_id = sent_msg.message_id
+        state.pending_send_since = time.monotonic()
+    else:
+        await update.message.reply_text(_t("staged_sent_unverified"))
 
 
 async def deliver_deferred(context, state, _t) -> tuple[bool, str]:
@@ -218,22 +231,27 @@ async def deliver_deferred(context, state, _t) -> tuple[bool, str]:
     if text is None and photo is None:
         return (False, "nothing_deferred")
 
+    target = active_target(state)
     if photo is not None:
-        result = await asyncio.to_thread(state.target.stage_photo, photo, caption)
+        result = await asyncio.to_thread(target.stage_photo, photo, caption)
     else:
-        result = await asyncio.to_thread(state.target.stage_text, text)
+        result = await asyncio.to_thread(target.stage_text, text)
 
     if not result.ok:
         return (False, result.reason)
 
-    ok = await asyncio.to_thread(state.target.press_enter)
+    ok = await asyncio.to_thread(target.press_enter)
     if not ok:
         return (False, "focus_failed")
 
-    state.pending_send_text = None if photo is not None else text
-    state.pending_send_kind = "image" if photo is not None else "text"
-    state.pending_send_message_id = state.deferred_message_id
-    state.pending_send_since = time.monotonic()
+    # Same caveat as handle_text/handle_photo: ground-truth confirmation
+    # only means anything for Claude Desktop, since it watches Claude's own
+    # transcript for a matching event.
+    if target is state.target:
+        state.pending_send_text = None if photo is not None else text
+        state.pending_send_kind = "image" if photo is not None else "text"
+        state.pending_send_message_id = state.deferred_message_id
+        state.pending_send_since = time.monotonic()
 
     state.deferred_text = None
     state.deferred_photo_bytes = None

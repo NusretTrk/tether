@@ -41,6 +41,7 @@ BOT_COMMANDS = [
     BotCommand("shutdown", "Shut down this PC (minutes, or 'cancel')"),
     BotCommand("launch", "Start Claude Desktop if it is not running"),
     BotCommand("keys", "Send a key to the app (answer prompts)"),
+    BotCommand("target", "Where plain messages go (Claude, Cursor, ...)"),
     BotCommand("window", "Change which window Claude/AVD points at"),
     BotCommand("status", "Current model, effort, temps"),
     BotCommand("language", "Change language"),
@@ -80,6 +81,7 @@ def _build_app(config: Config) -> Application:
     app.add_handler(CommandHandler("shutdown", handlers.cmd_shutdown))
     app.add_handler(CommandHandler("launch", handlers.cmd_launch))
     app.add_handler(CommandHandler("keys", handlers.cmd_keys))
+    app.add_handler(CommandHandler("target", handlers.cmd_target))
     app.add_handler(CommandHandler("window", handlers.cmd_window))
     app.add_handler(CommandHandler("status", handlers.cmd_status))
     app.add_handler(CommandHandler("language", handlers.cmd_language))

@@ -37,6 +37,16 @@ activity_watch_enabled: true    # notify when a Running session goes Idle
 # is still checked against ClaudeDesktopTarget.is_valid_key_spec no matter
 # what's listed here (single keys, or safe modifier+key chords like
 # ctrl+s) — this only controls what's offered as a shortcut.
+#
+# The same profile names also work with /target <name> to route plain
+# text/photo messages there instead of Claude Desktop - e.g. /target cursor
+# then just type normally to send it into Cursor's chat instead. /target
+# claude switches back. This is lower-fidelity than Claude Desktop's own
+# handling (no verified delivery, no OCR-located input box - it just
+# focuses the window and pastes, trusting whatever has focus is the right
+# place), so it works best for a terminal or a single input area, not a
+# multi-panel app where the wrong panel might be focused.
+#
 # Uncomment and adjust to match your setup:
 #
 # keypad_profiles:

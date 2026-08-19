@@ -57,6 +57,11 @@ class AppState:
     unlocked: bool = False
     unlock_lockout: LockoutDecider = field(default_factory=lambda: LockoutDecider(LockoutPolicy()))
 
+    # Which app plain text/photo messages get routed to. None = Claude
+    # Desktop (state.target). Otherwise a name from settings.keypad_profiles
+    # - set via /target. See transport/target_resolve.py.
+    active_target_profile: str | None = None
+
     # error signature -> monotonic time last forwarded to Telegram,
     # so a repeating fault doesn't flood the chat (see error_handler).
     error_notify_times: dict[str, float] = field(default_factory=dict)
