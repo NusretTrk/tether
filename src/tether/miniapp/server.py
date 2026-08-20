@@ -141,11 +141,46 @@ class MiniAppServer(ThreadingHTTPServer):
 class _Handler(BaseHTTPRequestHandler):
     server: MiniAppServer  # type: ignore[assignment]
     protocol_version = "HTTP/1.1"
+    # Without this, a connection that opens and then sends nothing (or
+    # sends one byte an hour) is held open forever - confirmed live by
+    # opening a raw socket and never writing to it. Combined with the
+    # connection cap above, that's a real slowloris DoS: ~20 idle
+    # connections would be enough to lock the real owner out of their
+    # own tunnel. socketserver applies this to the underlying socket
+    # (see BaseRequestHandler.setup()) and closes the connection on
+    # timeout rather than hanging - the actual request handlers below
+    # never see it, they just get a connection that eventually goes away
+    # if the client stalls.
+    timeout = 10
+    # Default BaseHTTPRequestHandler advertises "BaseHTTP/0.6 Python/3.12.1"
+    # in every response's Server header - confirmed live via curl -I. Not
+    # exploitable on its own, but it hands an internet-facing attacker a
+    # free, exact Python version to match against known CVEs for no
+    # reason. No legitimate client needs this to talk to the API.
+    def version_string(self) -> str:
+        return "tether"
 
     def log_message(self, fmt, *args):  # silence default stderr access logging
         log.debug("mini app http: " + fmt, *args)
 
     # ---- plumbing ----
+
+    def _security_headers(self) -> None:
+        """Standard hardening headers, cheap and with no compatibility
+        risk - added after a live adversarial pass, not because either
+        closes a demonstrated hole here specifically.
+        X-Content-Type-Options stops a browser from ever guessing its way
+        past the Content-Type we set. Referrer-Policy keeps the ngrok URL
+        (not itself secret, but no reason to hand it to whatever the
+        owner navigates to next) out of outgoing Referer headers.
+        Deliberately NOT setting X-Frame-Options here: Telegram's own web
+        and desktop clients render Mini Apps inside an iframe (only
+        mobile uses a native WebView), so DENY/SAMEORIGIN would break the
+        app on those clients for a clickjacking risk that's already low -
+        the page does nothing without a genuine Telegram/bearer launch
+        regardless of who's framing it."""
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
 
     def _send_json(self, status: int, payload) -> None:
         body = json.dumps(payload).encode("utf-8")
@@ -153,6 +188,7 @@ class _Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        self._security_headers()
         self.end_headers()
         self.wfile.write(body)
 
@@ -162,6 +198,7 @@ class _Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        self._security_headers()
         self.end_headers()
         self.wfile.write(body)
 

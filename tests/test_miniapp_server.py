@@ -219,6 +219,52 @@ def test_api_request_without_auth_header_is_rejected(running_server):
     assert body["error"] == "missing_input"
 
 
+def test_responses_carry_standard_hardening_headers(running_server):
+    _, base, _ = running_server
+    with urllib.request.urlopen(base + "/", timeout=5) as resp:
+        headers = resp.headers
+    assert headers.get("X-Content-Type-Options") == "nosniff"
+    assert headers.get("Referrer-Policy") == "no-referrer"
+    assert headers.get("X-Frame-Options") is None  # would break Telegram Web/Desktop's iframe
+
+
+def test_server_header_does_not_advertise_python_version(running_server):
+    """Found via `curl -I` against the real running server: the stdlib
+    default Server header is "BaseHTTP/0.6 Python/3.12.1" - a free, exact
+    fingerprint handed to anyone who requests it, for no reason a real
+    client needs. Not itself an exploit, but there's no reason to leak it."""
+    _, base, _ = running_server
+    with urllib.request.urlopen(base + "/", timeout=5) as resp:
+        server_header = resp.headers.get("Server", "")
+    assert "Python" not in server_header
+    assert "." not in server_header  # no version number of any kind
+
+
+def test_idle_connection_is_closed_rather_than_held_forever(running_server):
+    """Confirmed live before this fix: opening a raw socket and never
+    sending anything kept the connection (and one of the 20 concurrent
+    slots) alive indefinitely - ~20 such connections would lock the real
+    owner out of their own tunnel. socketserver's built-in `timeout`
+    class attribute is what actually closes it; this proves it end to
+    end against the real server rather than just asserting the
+    attribute is set."""
+    import socket
+    _, base, _ = running_server
+    port = int(base.rsplit(":", 1)[1])
+
+    sock = socket.create_connection(("127.0.0.1", port), timeout=15)
+    sock.settimeout(15)
+    start = time.time()
+    try:
+        data = sock.recv(1024)  # server-initiated close arrives as EOF (b"")
+    finally:
+        sock.close()
+    elapsed = time.time() - start
+
+    assert data == b""
+    assert elapsed < 15  # closed on its own well before our socket-level timeout
+
+
 def test_api_request_with_bad_signature_is_rejected(running_server):
     _, base, _ = running_server
     status, body = _request(base + "/api/status", headers={"Authorization": "tma bogus=data&hash=nope"})
