@@ -129,6 +129,10 @@ is actually running on that OS — on Windows they sit on disk, unread.
   confirmed before it runs, with a warning shortly before it fires. `/shutdown
   cancel` aborts it.
 - **Model & effort control** — `/model`, `/effort`, or the menu.
+- **`/target [name]`** — switch where plain text and photo messages go (e.g.
+  `/target antigravity`, `/target cursor`, or `/target claude` to revert).
+  For Antigravity, Tether automatically tails its JSONL transcript and relays
+  replies back with the `[antigravity]` prefix.
 - **`/launch [name]`** — starts Claude Desktop with no argument (unchanged);
   `/launch <name>` starts whatever's configured for that `/target` profile
   (e.g. `/launch antigravity`) via a `launch_command` you set once in

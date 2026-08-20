@@ -78,6 +78,46 @@ and the file gets written when you change something via `/settings`.
 
 ---
 
+## Targeting other apps (Antigravity, Cursor, Terminal)
+
+By default, Tether routes messages to Claude Desktop. You can target any other desktop AI agent or app (e.g. Antigravity, Cursor, Windows Terminal) by setting up a named profile under `keypad_profiles` in `config.yaml`:
+
+```yaml
+keypad_profiles:
+  antigravity:
+    window_keyword: "Antigravity"
+    launch_command: "C:\\Users\\you\\AppData\\Local\\Programs\\Antigravity IDE\\Antigravity IDE.exe"
+    input_click:
+      x: 0.919
+      y: 0.910
+    model_click:
+      x: 0.9014
+      y: 0.943
+    transcript_source: antigravity
+    keys:
+      Accept: tab
+      Reject: escape
+      "Yes": "y"
+      "No": "n"
+```
+
+### Profile Options:
+- **`window_keyword`** *(required)*: Substring to match against open window titles to bring the app to focus.
+- **`launch_command`** *(optional)*: Executable path or command to launch the app via `/launch <name>`.
+- **`input_click`** *(optional)*: Window-relative coordinates (`x`, `y` fractions from 0.0 to 1.0) to click the chat input area before pasting text.
+- **`model_click`** *(optional)*: Window-relative coordinates to open the model picker dropdown for `/model <name>`.
+- **`transcript_source`** *(optional)*: Set to `antigravity` to automatically tail and relay replies back to Telegram with the `[antigravity]` prefix.
+- **`keys`** *(optional)*: Custom button shortcuts for the `/keys <name>` remote keypad.
+
+### Telegram Commands for Targets:
+- **`/target <name>`**: Switches active target (e.g., `/target antigravity`). Plain text/photo messages now route to that app.
+- **`/target claude`** (or `/target default`): Reverts to Claude Desktop.
+- **`/launch <name>`**: Starts the configured application.
+- **`/keys <name>`**: Opens the keypad profile for that app.
+- **`/model <name>`**: Switches models in the target app via OCR dropdown matching (if `model_click` is configured).
+
+---
+
 ## Telegram Mini App (optional)
 
 A real scrollable UI inside Telegram — status, sessions, a live
