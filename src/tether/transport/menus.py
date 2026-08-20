@@ -291,3 +291,22 @@ def staged_message_keyboard(_t) -> InlineKeyboardMarkup:
         InlineKeyboardButton(_t("staged_edit"), callback_data="staged:edit"),
         InlineKeyboardButton(_t("staged_cancel"), callback_data="staged:cancel"),
     ]])
+
+
+CALLBACK_DATA_MAX_BYTES = 64  # Telegram's own hard limit
+
+
+def dialog_button_menu(safe_buttons: list[str]) -> InlineKeyboardMarkup | None:
+    """One tappable button per SAFE_DIALOG_BUTTON_LABELS match (see
+    monitors/dialogs.py for what's on that list and why) - the button's own
+    real text becomes both the label and, via callback_data, the exact name
+    click_dialog_button() looks for. None (no keyboard at all) if nothing
+    on the list matched, so a dialog with no recognized action falls back
+    to today's plain-text-only alert rather than showing an empty menu."""
+    rows = []
+    for name in safe_buttons:
+        data = "dialogbtn:click:" + name
+        if len(data.encode("utf-8")) > CALLBACK_DATA_MAX_BYTES:
+            continue  # never realistic for anything on the allowlist, but never send an invalid button
+        rows.append([InlineKeyboardButton(name, callback_data=data)])
+    return InlineKeyboardMarkup(rows) if rows else None

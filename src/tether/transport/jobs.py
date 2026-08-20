@@ -362,7 +362,13 @@ async def dialog_job(context: ContextTypes.DEFAULT_TYPE) -> None:
     dialogs = await asyncio.to_thread(state.dialog_watcher.poll)
     for d in dialogs:
         buttons = ", ".join(d.buttons) if d.buttons else "-"
-        await context.bot.send_message(state.config.secrets.chat_id, _t("dialog_alert", name=d.name, buttons=buttons))
+        from tether.monitors.dialogs import safe_dialog_buttons
+        from tether.transport.menus import dialog_button_menu
+        keyboard = dialog_button_menu(safe_dialog_buttons(d.buttons))
+        await context.bot.send_message(
+            state.config.secrets.chat_id, _t("dialog_alert", name=d.name, buttons=buttons),
+            reply_markup=keyboard,
+        )
 
 
 STALL_NOTIFY_AFTER_SEC = 90

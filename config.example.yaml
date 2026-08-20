@@ -112,6 +112,17 @@ activity_watch_enabled: true    # notify when a Running session goes Idle
 # pops an upsell, not a model list, so there's no model_click for cursor
 # below. Antigravity's opened a real list every time.
 #
+# launch_command (optional, per profile) lets /launch <name> actually open
+# the app instead of just switching messages to it once it's already
+# running. Any command your own shell could run - a bare .exe on PATH, a
+# full path in quotes if it has spaces, or a Start-menu shortcut name via
+# `start "" "App Name"`. Runs through the exact same subprocess.Popen the
+# built-in Claude Desktop /launch already uses - not a new mechanism, just
+# a second configured target for it. If window_keyword is also set (as it
+# normally is, for /target to work), /launch confirms a matching window
+# actually appeared before reporting success, and refuses to launch a
+# second copy if one's already running.
+#
 # Uncomment and adjust to match your setup:
 #
 # keypad_profiles:
@@ -138,6 +149,9 @@ activity_watch_enabled: true    # notify when a Running session goes Idle
 #       Down: down
 #   antigravity:
 #     window_keyword: "Antigravity"
+#     # Opens it via /launch antigravity if it isn't already running -
+#     # adjust to wherever it's actually installed on your machine.
+#     launch_command: "C:\\Users\\you\\AppData\\Local\\Programs\\antigravity\\Antigravity.exe"
 #     # Verified live, WITH a conversation already in the panel.
 #     input_click:
 #       x: 0.919

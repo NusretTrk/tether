@@ -96,6 +96,22 @@ def find_window_by_keyword(keyword: str, path_contains: str | None = None) -> in
     return max(matches, key=_area)
 
 
+def wait_for_window_by_keyword(
+    keyword: str, path_contains: str | None = None, timeout: float = 60.0, poll: float = 1.0,
+) -> bool:
+    """Polls find_window_by_keyword until a match appears or timeout runs
+    out - the generic version of what ClaudeDesktopTarget.wait_for_window
+    already does for Claude specifically, reused for /launch <profile> so
+    launching any configured app can report "it actually opened" rather
+    than just "the launch command didn't immediately fail"."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if find_window_by_keyword(keyword, path_contains):
+            return True
+        time.sleep(poll)
+    return False
+
+
 def focus_window(hwnd, retries: int = 4) -> bool:
     """Bring window to foreground AND verify it actually landed there.
     SetForegroundWindow can fail silently (Windows blocks background processes

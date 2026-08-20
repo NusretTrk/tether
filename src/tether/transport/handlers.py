@@ -475,16 +475,53 @@ async def cmd_target(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @restricted
 async def cmd_launch(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/launch with no args starts Claude Desktop, unchanged. /launch
+    <name> starts whatever's configured for that /target profile's
+    launch_command - reuses settings.keypad_profiles (same structure
+    /target and /keys already read from) rather than a second parallel
+    "list of apps I can open" config. A profile with no launch_command set
+    reports that plainly rather than guessing at a path - there's no safe
+    default to fall back to for an arbitrary app."""
     state, _t = _ctx(context)
-    if await asyncio.to_thread(state.target.is_app_running):
-        await update.message.reply_text(_t("app_already_running"))
+
+    if not context.args:
+        if await asyncio.to_thread(state.target.is_app_running):
+            await update.message.reply_text(_t("app_already_running"))
+            return
+        ok = await asyncio.to_thread(state.target.launch_app)
+        if not ok:
+            await update.message.reply_text(_t("app_launch_failed"))
+            return
+        appeared = await asyncio.to_thread(state.target.wait_for_window, 60.0)
+        await update.message.reply_text(_t("app_started") if appeared else _t("app_started_no_window"))
         return
-    ok = await asyncio.to_thread(state.target.launch_app)
+
+    name = context.args[0].lower()
+    profile = state.config.settings.keypad_profiles.get(name)
+    launch_command = profile.get("launch_command") if profile else None
+    if not launch_command:
+        await update.message.reply_text(_t("launch_no_command_configured", name=name))
+        return
+
+    from tether.platform.window import find_window_by_keyword, wait_for_window_by_keyword
+    keyword = profile.get("window_keyword")
+    path_filter = profile.get("window_path_filter")
+    if keyword and await asyncio.to_thread(find_window_by_keyword, keyword, path_filter):
+        await update.message.reply_text(_t("app_already_running_named", name=name))
+        return
+
+    from tether.platform import process
+    ok = await asyncio.to_thread(process.launch, launch_command)
     if not ok:
-        await update.message.reply_text(_t("app_launch_failed"))
+        await update.message.reply_text(_t("app_launch_failed_named", name=name))
         return
-    appeared = await asyncio.to_thread(state.target.wait_for_window, 60.0)
-    await update.message.reply_text(_t("app_started") if appeared else _t("app_started_no_window"))
+    if not keyword:
+        # No window_keyword configured for this profile - can't confirm a
+        # window appeared, but the launch command itself didn't fail.
+        await update.message.reply_text(_t("app_started_no_window"))
+        return
+    appeared = await asyncio.to_thread(wait_for_window_by_keyword, keyword, path_filter, 60.0)
+    await update.message.reply_text(_t("app_started_named", name=name) if appeared else _t("app_started_no_window"))
 
 
 @restricted

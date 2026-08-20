@@ -455,6 +455,43 @@ class ClaudeDesktopTarget:
             log.debug("detect_dialogs: transient COM error, skipping this poll")
             return []
 
+    def click_dialog_button(self, name: str) -> bool:
+        """Clicks a button by its exact visible name - only ever called for
+        a name the caller already checked against the reviewed safe-action
+        allowlist (monitors/dialogs.py::SAFE_DIALOG_BUTTON_LABELS), and only
+        in response to the owner explicitly tapping it in Telegram. This is
+        the owner clicking their own screen remotely, not tether deciding
+        anything on its own - same trust model as /keys or /cmd, and the
+        same reasoning that already lets switch_session below click a
+        session button by name.
+
+        Re-finds the control fresh rather than trusting anything cached -
+        the dialog may have changed or already closed since the alert was
+        sent, and clicking a stale/wrong element would be worse than
+        reporting "couldn't find it anymore"."""
+        if not CAPABILITIES.accessibility:
+            return False
+
+        def _work():
+            win = uia.find_root_window(self.window_keyword)
+            if not win:
+                return False
+            uia.warm_up(win)
+            control = uia.find_control_by_name(win, name, control_type="ButtonControl")
+            if not control:
+                return False
+            try:
+                control.Click(simulateMove=False)
+                return True
+            except Exception as e:
+                log.warning("dialog button click failed: %s", e)
+                return False
+        try:
+            return uia.run_on_uia_thread(_work)
+        except COMError:
+            log.debug("click_dialog_button: transient COM error")
+            return False
+
     # ---- model / effort (pixel-driven, verified live) ----
 
     def _find_model_effort_buttons(self, hwnd):

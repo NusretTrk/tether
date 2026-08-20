@@ -104,8 +104,16 @@ is actually running on that OS — on Windows they sit on disk, unread.
 - **Start/done notifications** — pings you when a session starts and when
   it goes idle, so you don't have to keep checking. Quiet mode gives you
   exactly that plus questions, nothing else.
-- **Dialog/popup alerts** — flags things like a "sign in again" banner
-  instead of silently doing nothing while you're away.
+- **Dialog/popup alerts, with a real way to act on them** — flags things
+  like a "sign in again" banner instead of silently doing nothing while
+  you're away, and now attaches a tap-to-click button for it right in the
+  alert when the button text is a recognized generic dialog action (OK,
+  Cancel, Sign in again, Retry, ...). Deliberately narrow on purpose: a
+  raw scan of what's on screen isn't reliably scoped to just the dialog
+  (confirmed live — it can also list session names sitting elsewhere in
+  the window), so only text matching a small reviewed allowlist ever
+  becomes a tap target; everything else still shows up as plain text for
+  you to act on manually if you need to.
 - **Answer prompts remotely** — agent tools ask for permission with numbered
   choices or y/n. A keypad sends those keystrokes, so a session blocked on a
   prompt doesn't sit there until you get back to the desk. If a tool call
@@ -121,6 +129,11 @@ is actually running on that OS — on Windows they sit on disk, unread.
   confirmed before it runs, with a warning shortly before it fires. `/shutdown
   cancel` aborts it.
 - **Model & effort control** — `/model`, `/effort`, or the menu.
+- **`/launch [name]`** — starts Claude Desktop with no argument (unchanged);
+  `/launch <name>` starts whatever's configured for that `/target` profile
+  (e.g. `/launch antigravity`) via a `launch_command` you set once in
+  `config.yaml`. Refuses cleanly if a profile has no launch command
+  configured, and won't open a second copy if one's already running.
 - **Real command output** — `/cmd` runs PowerShell and shows you the actual
   output, not just "done."
 - **CPU/GPU temperature monitoring** — periodic checks, emergency alerts.
@@ -187,14 +200,14 @@ the MCP server: [docs/SETUP.md](docs/SETUP.md).
 | `/keys [profile]` | Remote keypad — answer prompts the agent is blocked on |
 | `/kill` | Close terminal/emulator/Claude |
 | `/restart` | Restart Claude Desktop cleanly, confirmed first |
-| `/launch` | Start Claude Desktop if it isn't running |
+| `/launch [name]` | Start Claude Desktop, or a configured app by its `/target` profile name |
 | `/shutdown <minutes>\|cancel` | Shut down this PC, confirmed first, cancellable |
 | `/unlock <password>` / `/lock` | Second-factor gate, if `BOT_PASSWORD` is set |
 | `/status` | Current model, effort, temperatures |
 | `/language` | Switch language |
 | `/mode` | Output verbosity: live / summary / quiet / verbose |
 | `/confirm on\|off` | Stage Send/Edit/Cancel before delivering, or send instantly |
-| `/miniapp [on\|off]` | Mini App status (actually-running, not just the setting), or turn it on/off directly |
+| `/miniapp [on\|off\|link\|revoke]` | Mini App status (actually-running, not just the setting), turn it on/off, or get/revoke a browser-only access link |
 | `/settings` | View and edit runtime settings |
 
 Plain text (not a command) is typed into Claude's input box, or wherever

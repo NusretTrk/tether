@@ -137,3 +137,39 @@ def test_invisible_windows_are_never_matched(fake_windows):
     with _pytest.MonkeyPatch.context() as mp:
         mp.setattr(win32gui, "IsWindowVisible", lambda hwnd: False)
         assert window_mod.find_window_by_keyword("Claude") is None
+
+
+# ---- wait_for_window_by_keyword (the generic /launch <name> confirmation) ----
+
+def test_wait_returns_true_immediately_when_already_found(monkeypatch):
+    monkeypatch.setattr(window_mod, "find_window_by_keyword", lambda kw, path: 123)
+    assert window_mod.wait_for_window_by_keyword("Antigravity", None, timeout=5, poll=0.01) is True
+
+
+def test_wait_times_out_when_never_found(monkeypatch):
+    monkeypatch.setattr(window_mod, "find_window_by_keyword", lambda kw, path: None)
+    assert window_mod.wait_for_window_by_keyword("Antigravity", None, timeout=0.05, poll=0.01) is False
+
+
+def test_wait_succeeds_once_the_window_appears_on_a_later_poll(monkeypatch):
+    calls = {"n": 0}
+
+    def fake_find(kw, path):
+        calls["n"] += 1
+        return 123 if calls["n"] >= 3 else None
+
+    monkeypatch.setattr(window_mod, "find_window_by_keyword", fake_find)
+    assert window_mod.wait_for_window_by_keyword("Antigravity", None, timeout=5, poll=0.01) is True
+    assert calls["n"] == 3
+
+
+def test_wait_passes_path_contains_through(monkeypatch):
+    captured = {}
+
+    def fake_find(kw, path):
+        captured["kw"], captured["path"] = kw, path
+        return 1
+
+    monkeypatch.setattr(window_mod, "find_window_by_keyword", fake_find)
+    window_mod.wait_for_window_by_keyword("Antigravity", "Programs", timeout=5, poll=0.01)
+    assert captured == {"kw": "Antigravity", "path": "Programs"}

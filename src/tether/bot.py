@@ -42,7 +42,7 @@ BOT_COMMANDS = [
     BotCommand("kill", "Close terminal/emulator/Claude"),
     BotCommand("restart", "Restart Claude Desktop cleanly"),
     BotCommand("shutdown", "Shut down this PC (minutes, or 'cancel')"),
-    BotCommand("launch", "Start Claude Desktop if it is not running"),
+    BotCommand("launch", "Start Claude Desktop, or /launch <name> for a configured app"),
     BotCommand("keys", "Send a key to the app (answer prompts)"),
     BotCommand("target", "Where plain messages go (Claude, Cursor, ...)"),
     BotCommand("window", "Change which window Claude/AVD points at"),

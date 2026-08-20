@@ -25,10 +25,13 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     parts = data.split(":")
     category = parts[0]
 
-    # A callback query can only be answered once. Keypad presses answer with
-    # their own toast further down, so only acknowledge here for everything
-    # else - answering twice raises.
-    if category != "key":
+    # A callback query can only be answered once. Keypad presses and dialog
+    # button clicks answer with their own toast further down (so the
+    # original alert stays visible, with the same buttons, rather than
+    # being edited away - the owner might need to see the dialog's state or
+    # tap a second button), so only acknowledge here for everything else -
+    # answering twice raises.
+    if category not in ("key", "dialogbtn"):
         await query.answer()
 
     async def edit(text: str, markup=None, parse_mode=None):
@@ -444,6 +447,17 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             state.staged_photo = False
             await asyncio.to_thread(target.clear_input)
             await edit(_t("staged_cancelled"))
+        return
+
+    # ---- dialog button click (see monitors/dialogs.py for the safety
+    # design - only ever offered for a name on the reviewed allowlist) ----
+    if category == "dialogbtn":
+        name = ":".join(parts[2:])  # defensive rejoin, in case the label itself ever contained a colon
+        ok = await asyncio.to_thread(state.target.click_dialog_button, name)
+        await query.answer(
+            text=_t("dialog_clicked", name=name) if ok else _t("dialog_click_failed", name=name),
+            show_alert=False,
+        )
         return
 
     log.warning("unhandled callback_data: %r", data)
