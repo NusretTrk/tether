@@ -1,10 +1,11 @@
 """Application wiring: builds the Telegram Application, registers every
-handler and background job, and runs with startup-retry resilience."""
+handler and background job. Startup-failure resilience lives one layer up,
+in watchdog.py - see main() below for why."""
 from __future__ import annotations
 
 import asyncio
 import logging
-import time
+import sys
 
 from telegram import BotCommand
 from telegram.ext import Application, ApplicationBuilder, CallbackQueryHandler, CommandHandler, MessageHandler, filters
@@ -54,8 +55,6 @@ BOT_COMMANDS = [
     BotCommand("settings", "View/edit settings"),
     BotCommand("help", "Show help"),
 ]
-
-STARTUP_RETRY_INTERVAL_SEC = 30
 
 
 async def _post_init(app: Application) -> None:
@@ -173,15 +172,33 @@ def main() -> None:
     config = Config.load()
 
     # At-login auto-start can fire before Wi-Fi/DNS is up, which crashes the
-    # initial getMe() call — retry startup indefinitely instead of dying on
-    # one bad connection attempt at boot.
-    while True:
-        try:
-            _build_app(config).run_polling()
-            break  # run_polling only returns on a clean shutdown
-        except Exception as e:
-            log.error("Startup/run failed, retrying in %ss: %s", STARTUP_RETRY_INTERVAL_SEC, e)
-            time.sleep(STARTUP_RETRY_INTERVAL_SEC)
+    # initial getMe() call. This used to retry in a loop within this same
+    # process (time.sleep + call run_polling() again) - confirmed live,
+    # not assumed, that this doesn't actually work: after a first failed
+    # run_polling() call, every subsequent attempt in the same process
+    # fails immediately with "Event loop is closed" regardless of whether
+    # the network has since recovered (run_polling(close_loop=True) tears
+    # down the asyncio loop it used on the way out, and PTB/asyncio's
+    # internals don't hand back a working one to a second call in the same
+    # process). A real Telegram-API outage during this session sat there
+    # for minutes, connectivity came back, and the bot never recovered on
+    # its own - it looked like resilience but wasn't.
+    #
+    # The actual fix: don't retry in-process at all. Log the failure and
+    # exit with a nonzero code, and let watchdog.py - which already exists
+    # specifically to relaunch tether unconditionally on process death, and
+    # is what SETUP.md's autostart install actually points the Startup
+    # shortcut at - bring up a completely fresh process instead. A fresh
+    # process gets fresh asyncio state guaranteed, which an in-process
+    # retry cannot promise. If tether is ever run directly without the
+    # watchdog wrapper, a boot-time DNS hiccup now means an exit instead of
+    # a fake retry - an honest failure beats a retry loop that looks alive
+    # but can't actually reconnect.
+    try:
+        _build_app(config).run_polling()
+    except Exception:
+        log.error("Startup/run failed - exiting so watchdog.py can relaunch cleanly", exc_info=True)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
