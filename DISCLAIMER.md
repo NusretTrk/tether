@@ -38,6 +38,19 @@ This is remote control software. Read this part properly before running it.
   transit (TLS) like any HTTPS traffic, but Telegram's actual end-to-end
   feature (Secret Chats) doesn't exist for bots. Don't treat this bot as
   more private than a normal Telegram conversation, because it isn't one.
+- **The optional Mini App puts a real server on the open internet.** If you
+  turn it on, your machine runs an HTTP server tunneled out through your
+  own ngrok account with a public URL. Every meaningful request behind it
+  is gated on a Telegram-signed credential or a bearer token only you ever
+  see — read the [Security section of the README](README.md#security) for
+  exactly what that boundary is and isn't — but you are choosing to expose
+  something to the internet, and that carries different risk than a bot
+  that only ever talks to Telegram's own servers. Turn it off (`/miniapp
+  off`, or the button in the Mini App itself) whenever you don't need it.
+  If you use `/miniapp link` to open it outside Telegram, that link is a
+  bearer credential in plain text — anyone who gets it has your access.
+  Treat it like a password: don't forward it, screenshot it, or paste it
+  anywhere, and revoke it (`/miniapp revoke`) the moment you're unsure.
 
 ## Your responsibilities
 

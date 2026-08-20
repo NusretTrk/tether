@@ -259,16 +259,32 @@ Two files, two purposes:
   exists and let a stranger burn the account's rate limit.
 - **Mini App, if you turn it on**: the ngrok URL itself is not treated as
   secret — a stranger who finds it gets an empty page and nothing else.
-  Every actual API request has to carry a Telegram-signed `initData` blob,
-  verified with the real HMAC-SHA256 algorithm Telegram documents, checked
-  for freshness, and checked against your one chat ID — nobody without
-  your bot token can forge one. Repeated bad signatures get locked out
+  Every actual API request has to carry either a Telegram-signed `initData`
+  blob (verified with the real HMAC-SHA256 algorithm Telegram documents,
+  checked for freshness, and checked against your one chat ID — nobody
+  without your bot token can forge one) or a bearer token from `/miniapp
+  link` (see below). Repeated bad signatures or bad tokens get locked out
   (same mechanism as `/unlock`) and you get a one-time Telegram alert when
   that trips, since it could be a stranger who found the URL rather than
-  you. Concurrent connections are capped, since an internet-reachable
-  server with no limit is a resource-exhaustion target. The ngrok
-  authtoken never appears on a command line (visible via Task Manager) —
-  it's handed to the subprocess through its own environment.
+  you. A locked `BOT_PASSWORD` blocks both credential types the same way.
+  Concurrent connections are capped and idle ones are dropped after 10s,
+  since an internet-reachable server with no limit is a resource-exhaustion
+  target — this was found by actually opening a socket and never sending
+  anything, not assumed. The server doesn't advertise its Python version.
+  The ngrok authtoken never appears on a command line (visible via Task
+  Manager) — it's handed to the subprocess through its own environment.
+- **Opening the Mini App outside Telegram (`/miniapp link`)**: there's no
+  Telegram session to sign anything when the app is opened as a bookmarked
+  web page (iOS "Add to Home Screen") instead of launched from Telegram
+  itself, so this needs its own credential. `/miniapp link` issues a
+  random 256-bit token and sends it as a URL *fragment*
+  (`https://yourdomain/#t=...`) — fragments are never sent to any server by
+  the browser, so this token never touches ngrok's logs or tether's own.
+  Only its SHA-256 hash is ever written to disk (`state/web_token.json`,
+  gitignored). `/miniapp revoke` invalidates it instantly, and the link
+  message deletes itself from the chat after 10 minutes regardless, since
+  it's a live credential sitting in plain text. Treat that link exactly
+  like a password — anyone who gets it has the same access you do.
 
 ## What's not built yet
 

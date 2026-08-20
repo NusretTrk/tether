@@ -152,13 +152,21 @@ ever committed or logged.
    ngrok process — a real stop, not just hiding the button, for whenever
    you don't need your PC reachable and don't want it "streaming" in the
    background.
-6. Message **@BotFather**, send `/mybots`, pick your bot → **Bot
+   There's also a Stop button right on the Mini App's own Status screen
+   for the same thing, one tap, no need to go back to the chat.
+6. Want it as a browser icon (e.g. iOS "Add to Home Screen") instead of
+   only opening it from Telegram? Send `/miniapp link` — it replies with a
+   private link good until you revoke it (`/miniapp revoke`) or it
+   self-deletes from the chat in 10 minutes. Open that link, then use your
+   browser's own "Add to Home Screen." Treat the link like a password —
+   whoever has it has your access to this PC.
+7. Message **@BotFather**, send `/mybots`, pick your bot → **Bot
    Settings → Menu Button → Configure menu button**, and send it
    `https://yourname.ngrok-free.app/` as the URL. (This pairs the domain
    with your bot — a one-time step Telegram requires, done through
    BotFather rather than the Bot API, since domain pairing isn't
    something a bot can do to itself.)
-7. If you set the token/domain by hand (not through the bot), restart
+8. If you set the token/domain by hand (not through the bot), restart
    tether now so it picks up the file changes — the bot-side path in
    step 4 already applied everything live. Either way, your chat's menu
    button (bottom-left, next to the text box) now opens the Mini App.
