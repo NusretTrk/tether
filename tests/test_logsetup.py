@@ -25,6 +25,18 @@ def test_redacts_token_in_args():
     assert "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ" not in record.args[0]
 
 
+def test_redacts_a_bare_token_with_no_bot_prefix():
+    """The regex used to require a literal "bot" prefix, since that's how
+    PTB's own request-URL logging happens to write it today. Widened to
+    match the token's actual shape so a bare token also gets caught if
+    any future code path ever logs the raw value directly."""
+    f = RedactTokenFilter()
+    record = _make_record("token=123456789:FAKEtokenFAKEtokenFAKEtokenFAKEtoken")
+    f.filter(record)
+    assert "FAKEtoken" not in record.msg
+    assert "***REDACTED***" in record.msg
+
+
 def test_leaves_normal_messages_untouched():
     f = RedactTokenFilter()
     record = _make_record("Application started")

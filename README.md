@@ -75,13 +75,22 @@ is actually running on that OS — on Windows they sit on disk, unread.
   prefixed `[antigravity]` so it's never confused with the Claude relay
   running in parallel. Cursor doesn't have this yet — its history lives in
   an undocumented internal SQLite schema, not a plain transcript file.
-- **Telegram Mini App (optional)** — a real scrollable UI inside Telegram
-  (status, sessions, live transcript, settings) instead of nested button
-  menus, backed by your own free ngrok tunnel. Off by default; see
-  [docs/SETUP.md](docs/SETUP.md) for the one-time setup. The tunnel URL
-  itself is never treated as secret — every request has to carry a
-  Telegram-signed proof of who's asking, checked against your chat ID, the
-  same way everything else in this bot is gated.
+- **Telegram Mini App (optional)** — a real mobile-app-style UI inside
+  Telegram instead of nested button menus, backed by your own free ngrok
+  tunnel. Status (model/effort/temps, tap the model name to switch),
+  Sessions, a real two-way Chat tab (type to Claude from your phone, see
+  replies stream in), a Command tab that reuses `/cmd`'s exact
+  stage-then-confirm flow so a remote command is never a silent side
+  channel, and Settings — all themed off whichever app `/target` currently
+  points at. A Stop button lives right on the Status screen for killing
+  the tunnel with one tap. `/miniapp link` also lets you open it as a
+  bookmarked web app outside Telegram entirely (e.g. iOS "Add to Home
+  Screen") — see [docs/SETUP.md](docs/SETUP.md) for both setups. Off by
+  default. The tunnel URL itself is never treated as secret — every
+  request has to carry a Telegram-signed proof of who's asking (or a
+  bearer token only you were ever shown, for the browser-link path),
+  checked against your chat ID, the same way everything else in this bot
+  is gated.
 - **Crash-safe state** — a pending send, a staged message/photo, a staged
   `/cmd`, or a pending `/shutdown` survive a crash or watchdog restart
   instead of silently vanishing. `ask()` already did (its handoff was

@@ -86,14 +86,25 @@ default. Skip this section entirely if you're happy with the buttons.
 
 **Read this before turning it on.** The Mini App needs your PC reachable
 over a public HTTPS URL, via a tunnel (ngrok) that you run alongside
-tether. The URL itself is treated as *not secret* — anyone who finds it
-can load the empty page shell, but every actual request requires a
-freshly-signed Telegram `initData` blob proving it came from your own
-Telegram session for this exact bot, which nobody without your bot token
-can forge (see `miniapp/auth.py` if you want to read the actual check).
-So the real thing to protect is the same thing you're already
-protecting: `BOT_TOKEN` and `NGROK_AUTHTOKEN`, both in `.env`, neither
-ever committed or logged.
+tether. Turning this on means something on your machine is reachable
+from the open internet, full stop — that's a different risk profile than
+a bot that only ever talks outward to Telegram's own servers, and you're
+taking it on at your own risk. tether's side of that bargain: the URL
+itself is treated as *not secret* — anyone who finds it can load the
+empty page shell and nothing else, since every actual request requires
+either a freshly-signed Telegram `initData` blob proving it came from
+your own Telegram session for this exact bot (see `miniapp/auth.py` for
+the real check), or a bearer token only you were ever shown
+(`/miniapp link`, see below) — nobody without your bot token or that
+token can forge either one. Repeated bad attempts of either kind get
+rate-limited and you get alerted. None of that makes the tunnel itself
+risk-free, though — ngrok's own infrastructure, DNS, and your own
+machine's general security posture are all still real dependencies
+outside tether's control. If that tradeoff doesn't sit right with you,
+skip this feature entirely and use the regular chat buttons instead;
+nothing else in tether needs it. The real thing to protect either way is
+the same thing you're already protecting: `BOT_TOKEN` and
+`NGROK_AUTHTOKEN`, both in `.env`, neither ever committed or logged.
 
 **One-time setup per install** (not per session — do this once):
 
@@ -154,12 +165,35 @@ ever committed or logged.
    background.
    There's also a Stop button right on the Mini App's own Status screen
    for the same thing, one tap, no need to go back to the chat.
-6. Want it as a browser icon (e.g. iOS "Add to Home Screen") instead of
-   only opening it from Telegram? Send `/miniapp link` — it replies with a
-   private link good until you revoke it (`/miniapp revoke`) or it
-   self-deletes from the chat in 10 minutes. Open that link, then use your
-   browser's own "Add to Home Screen." Treat the link like a password —
-   whoever has it has your access to this PC.
+6. **Optional: put it on your home screen as its own icon**, so you can
+   open tether without going through Telegram at all.
+
+   1. Send `/miniapp link` to the bot. It replies with a private link and
+      deletes that message on its own after 10 minutes (or immediately if
+      you run `/miniapp revoke` — do that any time you want the link dead
+      right now, then send `/miniapp link` again for a fresh one).
+   2. **This link is a credential, not a bookmark.** Anyone who has it
+      can do anything you can do on this PC through the Mini App — the
+      same weight as your bot token or `BOT_PASSWORD`. Don't forward it,
+      don't screenshot it, don't paste it into another chat or app.
+   3. **On iPhone/iPad (confirmed):** tap the link to open it in Safari
+      (or Telegram's own in-app browser). Tap the **Share** button (the
+      square with an arrow pointing up — in Safari's bottom toolbar, or
+      the share icon if you're still in Telegram's browser view). Scroll
+      the share sheet down and tap **Add to Home Screen**. Give it a name
+      if you want, then tap **Add**. An icon now sits on your home screen
+      that opens tether directly, full-screen, no Safari address bar.
+   4. **On Android:** the equivalent exists (Chrome's menu → *Add to Home
+      screen* / *Install app*), but this hasn't been tested against a
+      real Android device for this project — the exact menu wording and
+      steps vary by phone and browser. If you try it, the general idea is
+      the same: open the link, find your browser's "add to home screen"
+      or "install" option, confirm.
+   5. Opening the icon later re-reads the same link from where your
+      browser saved it — nothing needs to be typed in again unless you
+      revoke it, in which case that shortcut simply stops working
+      (`/miniapp link` for a fresh one, then redo the add-to-home-screen
+      step for the new link).
 7. Message **@BotFather**, send `/mybots`, pick your bot → **Bot
    Settings → Menu Button → Configure menu button**, and send it
    `https://yourname.ngrok-free.app/` as the URL. (This pairs the domain

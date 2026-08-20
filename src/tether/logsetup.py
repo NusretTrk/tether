@@ -11,16 +11,21 @@ import logging.handlers
 import re
 from pathlib import Path
 
-_TOKEN_RE = re.compile(r"bot\d{6,12}:[A-Za-z0-9_-]{30,50}")
+# Matches the token shape itself (Telegram bot tokens are always
+# \d{6,12}:[A-Za-z0-9_-]{30,50}), not just the "bot<token>" form PTB's own
+# request-URL logging happens to produce today - so this still catches the
+# token if some future code path ever logs the bare value directly,
+# without the "bot" prefix it currently always shows up with.
+_TOKEN_RE = re.compile(r"\d{6,12}:[A-Za-z0-9_-]{30,50}")
 
 
 class RedactTokenFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         if isinstance(record.msg, str):
-            record.msg = _TOKEN_RE.sub("bot***REDACTED***", record.msg)
+            record.msg = _TOKEN_RE.sub("***REDACTED***", record.msg)
         if record.args:
             record.args = tuple(
-                _TOKEN_RE.sub("bot***REDACTED***", a) if isinstance(a, str) else a
+                _TOKEN_RE.sub("***REDACTED***", a) if isinstance(a, str) else a
                 for a in record.args
             )
         return True

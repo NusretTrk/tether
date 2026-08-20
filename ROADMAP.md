@@ -67,17 +67,28 @@ forgotten — if it's not done, it's below with a reason.
   back fully live; a message where Enter was already pressed comes back as
   an honest "couldn't verify delivery" notice instead of faking a
   confirmation a fresh transcript tailer could never actually observe.
-- **Telegram Mini App** (optional, off by default) — real scrollable UI
-  inside Telegram: status, sessions, live transcript, settings, backed by
-  the user's own free ngrok static domain. Security is app-layer, not
-  URL-secrecy: every request needs a Telegram-signed `initData` blob
-  (real HMAC-SHA256, checked for freshness and against the one chat_id),
-  repeated bad signatures trip a lockout and a one-time alert, concurrent
-  connections are capped (an internet-facing stdlib server has no built-in
-  limit otherwise), and the ngrok authtoken never touches a command line.
-  The chat menu button is kept in sync with actual server state, not the
-  raw setting, so a misconfigured "enabled" flag never shows a button
-  pointing at a dead URL. `/start` re-syncs it on demand.
+- **Telegram Mini App** (optional, off by default) — a Claude-inspired
+  mobile-app UI inside Telegram: status (tap the model name for a real
+  picker), sessions, a two-way Chat tab, a Command tab reusing `/cmd`'s
+  own stage-then-confirm-and-audit flow, and Settings, all themed off the
+  active `/target`, backed by the user's own free ngrok static domain.
+  `/miniapp link` opens the same app as a bookmarked web page outside
+  Telegram entirely (iOS "Add to Home Screen"), authenticated by a
+  256-bit bearer token sent as a URL fragment (never reaches any server
+  log) instead of Telegram's initData — `/miniapp revoke` kills it
+  instantly, the link message self-deletes from chat after 10 minutes.
+  Security is app-layer, not URL-secrecy: every request needs a
+  Telegram-signed `initData` blob (real HMAC-SHA256, checked for
+  freshness and against the one chat_id) or a matching bearer token,
+  repeated bad credentials of either kind trip a lockout and a one-time
+  alert, concurrent connections are capped and idle ones dropped after
+  10s (an internet-facing stdlib server has no built-in limit otherwise —
+  confirmed by actually holding a socket open with nothing sent, not
+  assumed), the server doesn't advertise its Python version, and the
+  ngrok authtoken never touches a command line. The chat menu button is
+  kept in sync with actual server state, not the raw setting, so a
+  misconfigured "enabled" flag never shows a button pointing at a dead
+  URL. `/start` re-syncs it on demand.
 - **Customizable everything, first slice** — the Mini App's own settings
   screen now also covers the watcher toggles (dialog/stall/activity/
   app-health), usage-limit auto-continue, clipboard preservation, and
