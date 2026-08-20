@@ -337,5 +337,4 @@ the file-security tests need.)
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Please also read
-[DISCLAIMER.md](DISCLAIMER.md).
+MIT — see [LICENSE](LICENSE). If you use, reference, or fork this project, attribution to [@NusretTrk](https://github.com/NusretTrk) is required per the license. Please also read [DISCLAIMER.md](DISCLAIMER.md).
