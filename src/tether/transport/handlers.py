@@ -555,11 +555,32 @@ async def cmd_miniapp(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(_t("miniapp_set", state=_t("confirm_on" if on else "confirm_off")))
         return
 
+    if arg == "link":
+        from tether.miniapp.lifecycle import WEBLINK_EXPIRE_MIN, issue_web_link
+        url = issue_web_link(state)
+        if url is None:
+            await update.message.reply_text(_t("miniapp_missing_config"))
+            return
+        from tether.transport.jobs import miniapp_link_expire_job
+        msg = await update.message.reply_text(_t("miniapp_weblink_sent", url=url, minutes=WEBLINK_EXPIRE_MIN))
+        context.job_queue.run_once(miniapp_link_expire_job, when=WEBLINK_EXPIRE_MIN * 60, data=msg.message_id)
+        return
+
+    if arg == "revoke":
+        from tether.miniapp.lifecycle import revoke_web_link
+        revoke_web_link(state)
+        await update.message.reply_text(_t("miniapp_webrevoke_done"))
+        return
+
     running = state.miniapp_server is not None
     domain = state.config.settings.mini_app_ngrok_domain or "—"
     token_set = "✅" if state.config.secrets.ngrok_authtoken else "❌"
+    weblink_set = "✅" if state.web_token_hash else "❌"
     await update.message.reply_text(
-        _t("miniapp_status", running=_t("confirm_on" if running else "confirm_off"), domain=domain, token=token_set),
+        _t(
+            "miniapp_status", running=_t("confirm_on" if running else "confirm_off"),
+            domain=domain, token=token_set, weblink=weblink_set,
+        ),
         reply_markup=menus.miniapp_menu(_t),
     )
 

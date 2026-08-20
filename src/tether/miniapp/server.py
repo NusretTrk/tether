@@ -178,27 +178,38 @@ class _Handler(BaseHTTPRequestHandler):
 
     def _authorize(self) -> int | None:
         """Returns a signed user id on success, or None + writes an error
-        response itself on failure (so callers just check for None)."""
+        response itself on failure (so callers just check for None).
+
+        Two independent credentials are accepted, either is sufficient:
+        a fresh Telegram `tma <initData>` (the normal launch, see auth.py)
+        or a `Bearer <token>` matching the current web_token_hash (the
+        "add to home screen" path, see webtoken.py - there is no Telegram
+        session to sign anything when this page is opened as a bookmarked
+        web app instead of a real Mini App launch). Both funnel into the
+        same lockout/alert handling below - a flood of bad bearer tokens
+        is just as real an attack signal as a flood of bad signatures."""
         if self.server.is_locked_out():
             self._send_json(429, {"error": "too_many_failed_attempts"})
             return None
 
-        header = self.headers.get("Authorization", "")
-        init_data = header[4:] if header.startswith("tma ") else ""
         state = self.server.state
-        result = validate_init_data(init_data, state.config.secrets.bot_token, state.config.secrets.chat_id)
-        if not result.ok:
-            just_tripped = self.server.note_auth_failure()
-            log.warning("mini app: rejected request (%s)", result.reason)
-            if just_tripped:
-                self.server._bridge_send_message(
-                    "⚠️ Mini App: repeated invalid access attempts were just blocked for a few minutes. "
-                    "If this wasn't you, your ngrok URL may have leaked - consider reclaiming a new static domain.",
-                )
-            self._send_json(401, {"error": result.reason})
-            return None
+        header = self.headers.get("Authorization", "")
 
-        # A validly-signed initData only proves "this really is a Telegram
+        if header.startswith("Bearer "):
+            from tether.miniapp.webtoken import verify
+            if not verify(header[7:], state.web_token_hash):
+                self._reject_auth("bad_web_token")
+                return None
+            user_id = state.config.secrets.chat_id
+        else:
+            init_data = header[4:] if header.startswith("tma ") else ""
+            result = validate_init_data(init_data, state.config.secrets.bot_token, state.config.secrets.chat_id)
+            if not result.ok:
+                self._reject_auth(result.reason)
+                return None
+            user_id = result.user_id
+
+        # A validly-signed initData (or a matching web token) only proves "this really is a Telegram
         # session for the authorized chat_id" - exactly the same thing the
         # chat_id check on every other handler proves, and exactly the
         # thing BOT_PASSWORD exists to add a second factor on top of (see
@@ -214,7 +225,18 @@ class _Handler(BaseHTTPRequestHandler):
             self._send_json(423, {"error": "locked"})
             return None
 
-        return result.user_id
+        return user_id
+
+    def _reject_auth(self, reason: str) -> None:
+        just_tripped = self.server.note_auth_failure()
+        log.warning("mini app: rejected request (%s)", reason)
+        if just_tripped:
+            self.server._bridge_send_message(
+                "⚠️ Mini App: repeated invalid access attempts were just blocked for a few minutes. "
+                "If this wasn't you, your ngrok URL may have leaked - consider reclaiming a new static domain, "
+                "and run /miniapp revoke if you'd issued a browser link.",
+            )
+        self._send_json(401, {"error": reason})
 
     # ---- routing ----
 

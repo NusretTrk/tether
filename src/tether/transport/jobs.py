@@ -526,6 +526,22 @@ async def shutdown_warning_job(context: ContextTypes.DEFAULT_TYPE) -> None:
     await context.bot.send_message(state.config.secrets.chat_id, _t("shutdown_warning"))
 
 
+async def miniapp_link_expire_job(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Deletes the /miniapp link message a few minutes after it was sent -
+    it contains a live bearer credential in plain text, no different from
+    a password, so it shouldn't sit around in chat history indefinitely.
+    Best-effort: if the user already deleted it themselves, or forwarded
+    it and this copy is gone some other way, delete_message just raises
+    and is swallowed - the credential's real revocation is
+    state.web_token_hash, not this message's presence."""
+    state = context.bot_data["state"]
+    message_id = context.job.data
+    try:
+        await context.bot.delete_message(state.config.secrets.chat_id, message_id)
+    except Exception:
+        pass
+
+
 TARGET_TRANSCRIPT_RECHECK_EVERY = 10  # re-run discovery every N polls, matching transcript_job
 
 

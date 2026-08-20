@@ -119,6 +119,7 @@ class FakeState:
     miniapp_server: object = None
     ngrok_runner: object = None
     unlocked: bool = True  # default matches the common case (no BOT_PASSWORD set)
+    web_token_hash: str | None = None
     deferred_text: str | None = None
     deferred_photo_bytes: bytes | None = None
     deferred_caption: str = ""
@@ -404,6 +405,62 @@ def test_repeated_bad_auth_trips_lockout_and_fires_one_alert(running_server, mon
     status, body = _request(base + "/api/status", headers={"Authorization": "tma " + valid_init_data()})
     assert status == 429
     assert len(alerts) == 1  # fired exactly once, not once per failed attempt
+
+
+def test_bearer_token_matching_hash_is_accepted(running_server):
+    from tether.miniapp import webtoken
+    server, base, state = running_server
+    raw = "a-real-web-token"
+    state.web_token_hash = webtoken.hash_token(raw)
+
+    status, body = _request(base + "/api/status", headers={"Authorization": "Bearer " + raw})
+    assert status == 200
+
+
+def test_bearer_token_not_matching_hash_is_rejected(running_server):
+    from tether.miniapp import webtoken
+    server, base, state = running_server
+    state.web_token_hash = webtoken.hash_token("the-real-token")
+
+    status, body = _request(base + "/api/status", headers={"Authorization": "Bearer wrong-token"})
+    assert status == 401
+    assert body["error"] == "bad_web_token"
+
+
+def test_bearer_token_rejected_when_none_has_ever_been_issued(running_server):
+    server, base, state = running_server
+    assert state.web_token_hash is None
+
+    status, body = _request(base + "/api/status", headers={"Authorization": "Bearer anything"})
+    assert status == 401
+
+
+def test_bearer_token_also_respects_the_bot_password_lock(running_server):
+    from tether.miniapp import webtoken
+    server, base, state = running_server
+    raw = "a-real-web-token"
+    state.web_token_hash = webtoken.hash_token(raw)
+    state.config.secrets.bot_password = "secret"
+    state.unlocked = False
+
+    status, body = _request(base + "/api/status", headers={"Authorization": "Bearer " + raw})
+    assert status == 423
+    assert body["error"] == "locked"
+
+
+def test_bad_bearer_tokens_count_toward_the_same_lockout_as_bad_init_data(running_server, monkeypatch):
+    from tether.miniapp import webtoken
+    server, base, state = running_server
+    state.web_token_hash = webtoken.hash_token("the-real-token")
+    alerts = []
+    monkeypatch.setattr(server, "_bridge_send_message", lambda text: alerts.append(text))
+
+    for _ in range(20):
+        _request(base + "/api/status", headers={"Authorization": "Bearer wrong"})
+
+    status, body = _request(base + "/api/status", headers={"Authorization": "tma " + valid_init_data()})
+    assert status == 429
+    assert len(alerts) == 1
 
 
 def test_unknown_route_is_404(running_server):

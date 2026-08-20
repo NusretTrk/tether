@@ -54,6 +54,29 @@ def apply_mini_app_state(state, bot, event_loop) -> None:
     menu_button.schedule_menu_button_sync(bot, event_loop, state)
 
 
+WEBLINK_EXPIRE_MIN = 10  # how long the /miniapp link message stays before self-deleting
+
+
+def issue_web_link(state) -> str | None:
+    """Generates a fresh web-access token and returns the full URL to send
+    the owner, or None if there's no domain configured yet (a link would
+    just be dead - same precondition as turning the Mini App on at all).
+    Replaces whatever token was issued before - only one is ever live."""
+    domain = state.config.settings.mini_app_ngrok_domain.strip()
+    if not domain:
+        return None
+    from tether.miniapp import webtoken
+    raw = webtoken.issue()
+    state.web_token_hash = webtoken.hash_token(raw)
+    return f"https://{domain}/#t={raw}"
+
+
+def revoke_web_link(state) -> None:
+    from tether.miniapp import webtoken
+    webtoken.clear()
+    state.web_token_hash = None
+
+
 def stop_mini_app(state) -> None:
     """Also called directly from bot.py on shutdown - ngrok.exe is a real
     child process, not a thread, and does NOT die on its own just because

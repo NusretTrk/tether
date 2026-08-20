@@ -132,6 +132,8 @@ def miniapp_menu(_t) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(_t("confirm_on"), callback_data="miniapp:set:on"),
          InlineKeyboardButton(_t("confirm_off"), callback_data="miniapp:set:off")],
         [InlineKeyboardButton(_t("ngrok_configure_btn"), callback_data="ngroksetup:menu")],
+        [InlineKeyboardButton(_t("miniapp_weblink_btn"), callback_data="miniapp:weblink")],
+        [InlineKeyboardButton(_t("miniapp_webrevoke_btn"), callback_data="miniapp:webrevoke")],
         [back_button(_t, "menu:settings")],
     ])
 

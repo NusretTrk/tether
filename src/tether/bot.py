@@ -50,7 +50,7 @@ BOT_COMMANDS = [
     BotCommand("language", "Change language"),
     BotCommand("mode", "Change output verbosity"),
     BotCommand("confirm", "Toggle send confirmation"),
-    BotCommand("miniapp", "Mini App status, or on/off"),
+    BotCommand("miniapp", "Mini App status, on/off, or a browser link"),
     BotCommand("settings", "View/edit settings"),
     BotCommand("help", "Show help"),
 ]
@@ -105,6 +105,9 @@ def _build_app(config: Config) -> Application:
     state = AppState.build(config)
     app.bot_data["state"] = state
     app.bot_data["_recovered_summary"] = persistence.restore_into(state)
+
+    from tether.miniapp import webtoken
+    state.web_token_hash = webtoken.load_hash()
 
     app.add_handler(CommandHandler("start", handlers.cmd_start))
     app.add_handler(CommandHandler("help", handlers.cmd_help))

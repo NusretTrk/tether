@@ -111,6 +111,12 @@ class AppState:
     miniapp_server: object | None = None
     ngrok_runner: object | None = None
 
+    # SHA-256 hash of the current "add to home screen" web token, if one
+    # has been issued (see miniapp/webtoken.py). Loaded from disk at
+    # startup, kept here so a /miniapp link / /miniapp revoke mid-run
+    # takes effect immediately without a restart.
+    web_token_hash: str | None = None
+
     # Bot-side capture of the ngrok authtoken/domain, so setting them up
     # doesn't require hand-editing .env/config.yaml. See
     # transport/ngrok_setup.py. Only one of these is ever active at a

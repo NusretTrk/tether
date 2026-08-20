@@ -228,6 +228,21 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             from tether.miniapp.lifecycle import apply_mini_app_state
             await asyncio.to_thread(apply_mini_app_state, state, context.bot, state.event_loop)
             await edit(_t("miniapp_set", state=_t("confirm_on" if on else "confirm_off")), menus.settings_menu(_t))
+        elif action == "weblink":
+            from tether.miniapp.lifecycle import WEBLINK_EXPIRE_MIN, issue_web_link
+            url = issue_web_link(state)
+            if url is None:
+                await edit(_t("miniapp_missing_config"), menus.miniapp_menu(_t))
+                return
+            from tether.transport.jobs import miniapp_link_expire_job
+            await edit(_t("miniapp_weblink_sent", url=url, minutes=WEBLINK_EXPIRE_MIN), menus.miniapp_menu(_t))
+            context.job_queue.run_once(
+                miniapp_link_expire_job, when=WEBLINK_EXPIRE_MIN * 60, data=query.message.message_id,
+            )
+        elif action == "webrevoke":
+            from tether.miniapp.lifecycle import revoke_web_link
+            revoke_web_link(state)
+            await edit(_t("miniapp_webrevoke_done"), menus.miniapp_menu(_t))
         return
 
     # ---- ngrok credential setup (token/domain), see transport/ngrok_setup.py ----

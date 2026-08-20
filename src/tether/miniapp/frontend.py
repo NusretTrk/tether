@@ -82,6 +82,41 @@ INDEX_HTML = r"""<!doctype html>
     --shadow: 0 2px 6px rgba(0,0,0,0.30), 0 10px 28px -10px rgba(0,0,0,0.45);
     --shadow-lift: 0 -1px 0 var(--line), 0 -12px 30px -16px rgba(0,0,0,0.7);
   }
+  /* ---------- target-aware accents ----------
+     /target can point tether at another app, and the app should look
+     like it knows that. Only the accent family is re-tinted - the warm
+     cream/charcoal ground, the serif headings and every shape stay
+     exactly as they are, so it still reads as the same app talking to a
+     different thing rather than a different app. The :not() guard on
+     the light blocks keeps them from out-ordering the dark base above;
+     an unrecognised /target name lands on [data-target="custom"] and
+     gets its own plum tint rather than silently masquerading as
+     Claude. */
+  html[data-target="antigravity"]:not([data-theme="dark"]) {
+    --accent: #4E57A8; --accent-press: #3E4690;
+    --accent-soft: rgba(78,87,168,0.10); --accent-ink: #FFFFFF;
+  }
+  html[data-target="antigravity"][data-theme="dark"] {
+    --accent: #8E96E0; --accent-press: #7A82CC;
+    --accent-soft: rgba(142,150,224,0.16); --accent-ink: #14162F;
+  }
+  html[data-target="cursor"]:not([data-theme="dark"]) {
+    --accent: #1F7A6B; --accent-press: #175F53;
+    --accent-soft: rgba(31,122,107,0.10); --accent-ink: #FFFFFF;
+  }
+  html[data-target="cursor"][data-theme="dark"] {
+    --accent: #4FBFA8; --accent-press: #3EA890;
+    --accent-soft: rgba(79,191,168,0.16); --accent-ink: #07211C;
+  }
+  html[data-target="custom"]:not([data-theme="dark"]) {
+    --accent: #8A4F72; --accent-press: #74405F;
+    --accent-soft: rgba(138,79,114,0.10); --accent-ink: #FFFFFF;
+  }
+  html[data-target="custom"][data-theme="dark"] {
+    --accent: #C98BAE; --accent-press: #B4789A;
+    --accent-soft: rgba(201,139,174,0.16); --accent-ink: #2A1220;
+  }
+
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
     margin: 0; padding: 0; height: 100%;
@@ -209,6 +244,113 @@ INDEX_HTML = r"""<!doctype html>
   .hero .eyebrow { font-size: 11.5px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--accent); }
   .hero .model { font-family: var(--serif); font-size: 25px; letter-spacing: -0.015em; margin: 6px 0 2px; word-break: break-word; }
   .hero .meta { font-size: 13px; color: var(--text-2); }
+  /* the model line is a control, not a label - .hero::after is
+     pointer-events:none, but the stacking context still needs the
+     button lifted above it to take the tap */
+  .model-tap {
+    position: relative; z-index: 1;
+    display: flex; align-items: flex-start; gap: 8px;
+    width: 100%; text-align: left; margin: 6px 0 2px; padding: 0;
+    transform-origin: left center;
+    transition: transform 160ms var(--ease), opacity 160ms var(--ease-soft);
+  }
+  .model-tap:active { transform: scale(0.985); opacity: 0.7; }
+  .model-tap .model { margin: 0; min-width: 0; }
+  .model-tap .chev { flex: none; color: var(--text-3); display: flex; margin-top: 9px; }
+
+  /* ---------- bottom sheet ---------- */
+  .sheet { position: fixed; inset: 0; z-index: 60; display: none; }
+  .sheet.open { display: block; }
+  .sheet-scrim {
+    position: absolute; inset: 0; background: rgba(31,30,29,0.34);
+    opacity: 0; transition: opacity 220ms var(--ease-soft);
+  }
+  html[data-theme="dark"] .sheet-scrim { background: rgba(0,0,0,0.58); }
+  .sheet.in .sheet-scrim { opacity: 1; }
+  .sheet-panel {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    display: flex; flex-direction: column; max-height: 82%;
+    background: var(--surface); border-radius: 22px 22px 0 0;
+    box-shadow: 0 -10px 40px -12px rgba(31,30,29,0.38);
+    padding: 6px 18px calc(18px + env(safe-area-inset-bottom));
+    transform: translateY(101%); transition: transform 300ms var(--ease);
+  }
+  .sheet.in .sheet-panel { transform: none; }
+  .sheet-grip { flex: none; width: 38px; height: 4px; border-radius: 2px; background: var(--line-strong); margin: 6px auto 12px; }
+  .sheet-title { flex: none; font-family: var(--serif); font-size: 21px; letter-spacing: -0.015em; }
+  .sheet-sub { flex: none; font-size: 12.5px; color: var(--text-3); margin-top: 3px; }
+  .sheet-body { margin-top: 14px; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+  .sheet-loading { display: flex; align-items: center; gap: 9px; color: var(--text-2); font-size: 13.5px; padding: 16px 4px 22px; }
+  .sheet-msg { color: var(--text-2); font-size: 13.5px; padding: 12px 4px 20px; text-align: center; }
+  .sheet-actions { display: flex; gap: 10px; margin-top: 16px; }
+  .sheet-actions .btn { flex: 1; padding: 12px 16px; }
+  .btn.danger { background: var(--danger); color: #fff; }
+  .btn.danger:active { background: var(--danger); filter: brightness(0.88); }
+
+  .opt {
+    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+    padding: 13px 14px; border-radius: var(--r-md); background: var(--surface-2);
+    margin-bottom: 8px; font-weight: 450;
+    transition: transform 160ms var(--ease), background-color 160ms var(--ease-soft), opacity 160ms var(--ease-soft);
+  }
+  .opt:active { transform: scale(0.985); background: var(--surface-3); }
+  .opt .nm { flex: 1; min-width: 0; word-break: break-word; }
+  .opt .tick { flex: none; color: var(--accent); display: none; }
+  .opt.cur { background: var(--accent-soft); box-shadow: inset 0 0 0 1.5px var(--accent); }
+  .opt.cur .tick { display: flex; }
+  .opt .opt-spin {
+    display: none; flex: none; width: 15px; height: 15px; border-radius: 50%;
+    border: 2px solid var(--line-strong); border-top-color: var(--accent);
+    animation: spin 640ms linear infinite;
+  }
+  .sheet.working .opt { pointer-events: none; opacity: 0.42; transform: none; }
+  .sheet.working .opt.busy { opacity: 1; }
+  .opt.busy .opt-spin { display: block; }
+  .opt.busy .tick { display: none; }
+
+  /* ---------- command view ---------- */
+  /* .card.flush already sets padding - match its specificity to win */
+  .card.cmd-box { display: flex; align-items: center; gap: 10px; padding: 10px 11px; margin-bottom: 10px; }
+  .cmd-field {
+    flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;
+    background: var(--surface-2); border-radius: var(--r-sm); padding: 0 12px;
+    transition: box-shadow 160ms var(--ease-soft), background-color 160ms var(--ease-soft);
+  }
+  .cmd-field.focus { box-shadow: inset 0 0 0 1.5px var(--accent); }
+  .cmd-field .sigil { flex: none; font-family: var(--mono); font-size: 13px; color: var(--text-3); }
+  #cmd-input {
+    flex: 1; min-width: 0; border: none; outline: none; background: none;
+    font-family: var(--mono); font-size: 16px; /* 16px avoids iOS zoom-on-focus */
+    padding: 11px 0;
+  }
+  #cmd-input::placeholder { color: var(--text-3); font-family: var(--sans); }
+  .cmd-item {
+    background: var(--surface); border-radius: var(--r-md); box-shadow: var(--shadow-sm);
+    padding: 12px; margin-bottom: 10px; animation: pop 220ms var(--ease) both;
+  }
+  .cmd-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 9px; }
+  .cmd-head .c { flex: 1; min-width: 0; font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
+  .cmd-head .c::before { content: "> "; color: var(--text-3); }
+  .cmd-head .ts { flex: none; font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+  .cmd-badge {
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--danger); margin-bottom: 7px;
+  }
+  .cmd-running { display: flex; align-items: center; gap: 9px; color: var(--text-3); font-size: 13px; padding: 5px 2px 3px; }
+  /* Output is the one place a terminal look is honest: it IS console
+     text, and it stays dark in both themes so it never gets mistaken
+     for the app's own chrome. */
+  .term {
+    background: #171614; color: #E4E0D5;
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.5;
+    border-radius: var(--r-sm); padding: 11px 12px; margin: 0;
+    white-space: pre-wrap; word-break: break-word;
+    max-height: 320px; overflow: auto; -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  .term.quiet { color: #8E887B; font-style: italic; }
+  .cmd-item.fail .term { color: #F2AFA3; box-shadow: inset 0 0 0 1.5px var(--danger); }
+
   .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
   .tile {
     background: var(--surface); border-radius: var(--r-md); box-shadow: var(--shadow-sm);
@@ -404,11 +546,15 @@ INDEX_HTML = r"""<!doctype html>
     max-width: calc(100% - 40px);
     background: var(--surface); color: var(--text);
     box-shadow: var(--shadow); border-radius: 14px; padding: 11px 16px;
-    font-size: 13.5px; line-height: 1.4; text-align: center; z-index: 50;
+    font-size: 13.5px; line-height: 1.4; text-align: center; z-index: 70;
     transition: opacity 220ms var(--ease-soft), transform 260ms var(--ease);
   }
   #toast.show { opacity: 1; transform: translate(-50%, 0); }
   #toast.bad { box-shadow: var(--shadow), inset 0 0 0 1px var(--danger); color: var(--danger); }
+  /* a sheet owns the bottom of the screen, so the toast moves to the top
+     rather than landing on top of the sheet's own buttons */
+  body.sheet-on #toast { top: calc(12px + env(safe-area-inset-top)); bottom: auto; transform: translate(-50%, -16px); }
+  body.sheet-on #toast.show { transform: translate(-50%, 0); }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::after, *::before { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
@@ -429,7 +575,7 @@ INDEX_HTML = r"""<!doctype html>
 <div id="app">
   <header class="appbar">
     <div class="brandline">
-      <span class="mark"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.6c.5 0 .9.4.9.9v6.1l4.3-4.3a.9.9 0 1 1 1.3 1.3l-4.3 4.3h6.1a.9.9 0 0 1 0 1.8h-6.1l4.3 4.3a.9.9 0 1 1-1.3 1.3l-4.3-4.3v6.1a.9.9 0 1 1-1.8 0v-6.1l-4.3 4.3a.9.9 0 0 1-1.3-1.3l4.3-4.3H3.5a.9.9 0 0 1 0-1.8h6.1L5.3 6.6a.9.9 0 0 1 1.3-1.3l4.3 4.3V3.5c0-.5.4-.9.9-.9z"/></svg></span>
+      <span class="mark" id="brand-mark"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.6c.5 0 .9.4.9.9v6.1l4.3-4.3a.9.9 0 1 1 1.3 1.3l-4.3 4.3h6.1a.9.9 0 0 1 0 1.8h-6.1l4.3 4.3a.9.9 0 1 1-1.3 1.3l-4.3-4.3v6.1a.9.9 0 1 1-1.8 0v-6.1l-4.3 4.3a.9.9 0 0 1-1.3-1.3l4.3-4.3H3.5a.9.9 0 0 1 0-1.8h6.1L5.3 6.6a.9.9 0 0 1 1.3-1.3l4.3 4.3V3.5c0-.5.4-.9.9-.9z"/></svg></span>
       <span class="wordmark">tether</span>
       <span class="spacer"></span>
       <span class="pill" id="target-pill" hidden><span class="dot"></span><span id="target-name"></span></span>
@@ -465,6 +611,20 @@ INDEX_HTML = r"""<!doctype html>
         <div class="msg mine"><div class="bubble sk" style="width:130px;height:34px"></div></div>
         <div class="msg theirs"><div class="bubble sk" style="width:210px;height:52px"></div></div>
       </div>
+    </div>
+
+    <div class="view" id="view-command">
+      <div class="card flush cmd-box">
+        <span class="cmd-field" id="cmd-field">
+          <span class="sigil">&gt;</span>
+          <input id="cmd-input" type="text" placeholder="Type a command"
+                 autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false"
+                 enterkeyhint="go" maxlength="1000">
+        </span>
+        <button class="btn" id="cmd-run" disabled>Run</button>
+      </div>
+      <p class="hint">Nothing runs until you confirm it on the next screen. Commands execute on your PC with your own account's privileges, and the result is posted to your Telegram chat too.</p>
+      <div id="cmd-history"></div>
     </div>
 
     <div class="view" id="view-settings">
@@ -533,10 +693,23 @@ INDEX_HTML = r"""<!doctype html>
     <button class="tab" data-view="transcript">
       <span class="ico"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8 8 0 0 1-11.6 7.1L4 20l1.4-4.3A8 8 0 1 1 21 11.5z"/></svg></span>Chat
     </button>
+    <button class="tab" data-view="command">
+      <span class="ico"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M7.5 9.5l2.8 2.5-2.8 2.5"/><path d="M13 15h4"/></svg></span>Command
+    </button>
     <button class="tab" data-view="settings">
       <span class="ico"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/></svg></span>Settings
     </button>
   </nav>
+</div>
+
+<div class="sheet" id="sheet">
+  <div class="sheet-scrim" id="sheet-scrim"></div>
+  <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <div class="sheet-grip"></div>
+    <div class="sheet-title" id="sheet-title"></div>
+    <div class="sheet-sub" id="sheet-sub"></div>
+    <div class="sheet-body" id="sheet-body"></div>
+  </div>
 </div>
 
 <div id="toast" role="status" aria-live="polite"></div>
@@ -546,11 +719,20 @@ INDEX_HTML = r"""<!doctype html>
   const tg = window.Telegram && window.Telegram.WebApp;
   const initData = tg && tg.initData;
 
+  // "Add to Home Screen" launches this page outside any Telegram
+  // context at all - there is no initData to read, ever. The bearer
+  // token from /miniapp link travels as a URL *fragment*
+  // (https://domain/#t=...), which browsers never send to any server -
+  // it only ever exists client-side, read straight off location.hash.
+  const hashToken = (location.hash.match(/^#t=(.+)$/) || [])[1];
+  const authHeader = initData ? ("tma " + initData) : (hashToken ? ("Bearer " + hashToken) : null);
+
   // ---- security gate -------------------------------------------------
-  // No initData means this page was not opened from a real Telegram
-  // session. Bail out before anything else runs: #gate stays visible,
-  // #app stays hidden, and not a single /api/* request is ever made.
-  if (!initData) {
+  // Neither credential present means this page was not opened from a
+  // real Telegram session or a valid home-screen link. Bail out before
+  // anything else runs: #gate stays visible, #app stays hidden, and not
+  // a single /api/* request is ever made.
+  if (!authHeader) {
     return;
   }
 
@@ -601,7 +783,7 @@ INDEX_HTML = r"""<!doctype html>
 
   async function api(path, opts) {
     opts = opts || {};
-    const headers = Object.assign({ "Authorization": "tma " + initData }, opts.headers || {});
+    const headers = Object.assign({ "Authorization": authHeader }, opts.headers || {});
     if (opts.body) headers["Content-Type"] = "application/json";
     const res = await fetch(path, {
       method: opts.method || "GET", headers,
@@ -622,8 +804,13 @@ INDEX_HTML = r"""<!doctype html>
     if (m === "missing_text") return "Type something first.";
     if (m === "send_failed") return "tether couldn't hand that to the app. Try again.";
     if (m === "invalid_value" || m === "unknown_key") return "tether wouldn't accept that value.";
+    if (m === "missing_name") return "That model name came through empty.";
+    if (m === "missing_command") return "Type a command first.";
+    if (m === "nothing_staged") return "That command already expired - tap Run again.";
+    if (m === "exec_failed") return "tether couldn't run that on your PC.";
     if (m.indexOf("http_401") === 0 || m === "expired" || m === "bad_signature")
       return "This session expired. Close and reopen the Mini App.";
+    if (m === "http_409") return "Your PC wouldn't accept that.";
     if (m.indexOf("http") === 0) return "Can't reach tether right now - try again in a moment.";
     return "Something went wrong - try again in a moment.";
   }
@@ -647,11 +834,16 @@ INDEX_HTML = r"""<!doctype html>
     status: ["Status", "What your PC is doing right now"],
     sessions: ["Sessions", "Switch which conversation tether follows"],
     transcript: ["Chat", "Talk to Claude from anywhere"],
+    command: ["Command", "Run something on your PC"],
     settings: ["Settings", "Tune how tether behaves"],
   };
-  const views = { status: renderStatus, sessions: renderSessions, transcript: openTranscript, settings: renderSettings };
+  const views = {
+    status: openStatus, sessions: renderSessions, transcript: openTranscript,
+    command: renderCommand, settings: renderSettings,
+  };
   let currentView = "status";
   let transcriptTimer = null;
+  let statusTimer = null;
 
   document.querySelectorAll(".tab").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -666,32 +858,214 @@ INDEX_HTML = r"""<!doctype html>
       app.classList.toggle("on-transcript", name === "transcript");
       clearInterval(transcriptTimer);
       transcriptTimer = null;
+      clearInterval(statusTimer);
+      statusTimer = null;
       document.getElementById("main").scrollTop = name === "transcript" ? 1e7 : 0;
       views[name]();
     });
   });
   document.getElementById("screen-sub").textContent = TITLES.status[1];
 
+  // ---- target-aware chrome -------------------------------------------
+  // /api/status carries which app tether is actually driving right now.
+  // Rather than leaving that as one small pill nobody reads, the whole
+  // accent family, the appbar mark, the compose placeholder and the Chat
+  // subtitle follow it - so glancing at the app tells you what you're
+  // about to talk to. A name we don't recognise is NOT an error: it
+  // keeps its raw spelling everywhere and just gets the neutral "custom"
+  // tint.
+  const MARKS = {
+    claude: '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.6c.5 0 .9.4.9.9v6.1l4.3-4.3a.9.9 0 1 1 1.3 1.3l-4.3 4.3h6.1a.9.9 0 0 1 0 1.8h-6.1l4.3 4.3a.9.9 0 1 1-1.3 1.3l-4.3-4.3v6.1a.9.9 0 1 1-1.8 0v-6.1l-4.3 4.3a.9.9 0 0 1-1.3-1.3l4.3-4.3H3.5a.9.9 0 0 1 0-1.8h6.1L5.3 6.6a.9.9 0 0 1 1.3-1.3l4.3 4.3V3.5c0-.5.4-.9.9-.9z"/></svg>',
+    antigravity: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19.5V4.5"/><path d="M6.6 9.9L12 4.2l5.4 5.7"/><path d="M4 21.4h16"/></svg>',
+    cursor: '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5.6 2.4l13 9.4-6 1.1 2.9 6.1-2.7 1.3-2.9-6.1-4.3 4.2z"/></svg>',
+    custom: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3.4" y="3.4" width="17.2" height="17.2" rx="5.2"/><circle cx="12" cy="12" r="2.7" fill="currentColor" stroke="none"/></svg>',
+  };
+  const TARGET_LABELS = { claude: "Claude", antigravity: "Antigravity", cursor: "Cursor" };
+
+  let currentTarget = null;
+  function applyTarget(raw) {
+    const name = (typeof raw === "string" && raw.trim()) ? raw.trim() : "claude";
+    if (name === currentTarget) return;
+    currentTarget = name;
+    const key = Object.prototype.hasOwnProperty.call(TARGET_LABELS, name.toLowerCase())
+      ? name.toLowerCase() : "custom";
+    const label = key === "custom" ? name : TARGET_LABELS[key];
+
+    document.documentElement.setAttribute("data-target", key);
+    document.getElementById("brand-mark").innerHTML = MARKS[key];
+    document.getElementById("target-name").textContent = name;
+    const pill = document.getElementById("target-pill");
+    pill.hidden = false;
+    pill.classList.add("live");
+
+    input.placeholder = "Message " + label + "...";
+    TITLES.transcript[1] = "Talk to " + label + " from anywhere";
+    if (currentView === "transcript") {
+      document.getElementById("screen-sub").textContent = TITLES.transcript[1];
+    }
+  }
+
+  // ---- bottom sheet ---------------------------------------------------
+  const sheetEl = document.getElementById("sheet");
+  let sheetDismiss = null;
+  let sheetHideTimer = null;
+
+  function openSheet(opts) {
+    document.getElementById("sheet-title").textContent = opts.title || "";
+    const sub = document.getElementById("sheet-sub");
+    sub.textContent = opts.sub || "";
+    sub.hidden = !opts.sub;
+    document.getElementById("sheet-body").innerHTML = opts.html || "";
+    sheetDismiss = opts.onDismiss || null;
+    clearTimeout(sheetHideTimer);
+    sheetEl.classList.remove("working");
+    sheetEl.classList.add("open");
+    document.body.classList.add("sheet-on");
+    // Flush the display:none -> block change with a forced reflow so the
+    // browser has a real starting frame at translateY(101%) to animate
+    // FROM, then flip to .in synchronously. A requestAnimationFrame pair
+    // reads more idiomatically but silently never fires when the WebView
+    // isn't compositing (backgrounded / throttled), which would leave the
+    // panel parked off-screen with the scrim up and nothing to tap.
+    void sheetEl.offsetHeight;
+    sheetEl.classList.add("in");
+    try { tg.BackButton && tg.BackButton.show(); } catch (e) {}
+  }
+
+  /* `silent` closes without running onDismiss - used when the sheet's own
+     action already took over (a model was picked, a command confirmed),
+     so the cancel path doesn't fire on top of it. */
+  function closeSheet(silent) {
+    if (!sheetEl.classList.contains("open")) return;
+    const fn = sheetDismiss;
+    sheetDismiss = null;
+    sheetEl.classList.remove("in");
+    clearTimeout(sheetHideTimer);
+    sheetHideTimer = setTimeout(() => {
+      if (!sheetEl.classList.contains("in")) {
+        sheetEl.classList.remove("open", "working");
+        document.body.classList.remove("sheet-on");
+        // Emptied only after the slide-out finishes, so the panel still
+        // has its content while it animates away - and so a retired
+        // sheet leaves no stale buttons (with live listeners) behind.
+        sheetBody().innerHTML = "";
+      }
+    }, 300);
+    try { tg.BackButton && tg.BackButton.hide(); } catch (e) {}
+    if (!silent && fn) fn();
+  }
+  function sheetOpen() { return sheetEl.classList.contains("open"); }
+  function sheetBody() { return document.getElementById("sheet-body"); }
+
+  document.getElementById("sheet-scrim").addEventListener("click", () => {
+    if (sheetEl.classList.contains("working")) return;
+    haptic("light");
+    closeSheet();
+  });
+  try { tg.onEvent("backButtonClicked", () => { if (!sheetEl.classList.contains("working")) closeSheet(); }); } catch (e) {}
+
+  const TICK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+
+  // ---- model picker ---------------------------------------------------
+  async function openModelPicker() {
+    openSheet({
+      title: "Switch model",
+      sub: "tether drives the app's own picker - give it a couple of seconds.",
+      html: '<div class="sheet-loading"><span class="spin"></span>Reading the model list...</div>',
+    });
+
+    let data;
+    try {
+      data = await api("/api/models");
+    } catch (e) {
+      if (sheetOpen()) sheetBody().innerHTML = '<div class="sheet-msg">' + esc(friendlyError(e)) + "</div>";
+      return;
+    }
+    if (!sheetOpen()) return;   // dismissed while the list was loading
+
+    const models = (data && data.models) || [];
+    if (!models.length) {
+      sheetBody().innerHTML = '<div class="sheet-msg">This app didn\'t report any switchable models.</div>';
+      return;
+    }
+    // `current` is allowed to be null - nothing gets highlighted then,
+    // which is honest rather than guessing at a selection.
+    const cur = data.current;
+    sheetBody().innerHTML = models.map((m) =>
+      '<button class="opt' + (cur && m === cur ? " cur" : "") + '" data-model="' + esc(m) + '">' +
+        '<span class="nm">' + esc(m) + "</span>" +
+        '<span class="tick">' + TICK + "</span>" +
+        '<span class="opt-spin"></span>' +
+      "</button>"
+    ).join("");
+    sheetBody().querySelectorAll("[data-model]").forEach((btn) =>
+      btn.addEventListener("click", () => pickModel(btn, btn.dataset.model))
+    );
+  }
+
+  async function pickModel(btn, name) {
+    if (sheetEl.classList.contains("working")) return;
+    haptic("medium");
+    sheetEl.classList.add("working");
+    btn.classList.add("busy");
+    try {
+      const r = await api("/api/model", { method: "POST", body: { name: name } });
+      closeSheet(true);
+      toast("Model set to " + ((r && r.model) || name));
+      notifyHaptic("success");
+      renderStatus();
+    } catch (e) {
+      // 409 means the app's picker had no entry matching that name - a
+      // real answer from the PC, not a transport failure, so say so
+      // plainly and leave the sheet up to try something else.
+      const m = (e && e.message) || "";
+      toast(m === "http_409"
+        ? "Couldn't switch to that - the app didn't offer " + name + "."
+        : friendlyError(e), true);
+      notifyHaptic("error");
+      sheetEl.classList.remove("working");
+      btn.classList.remove("busy");
+    }
+  }
+
   // ---- status --------------------------------------------------------
   function tile(k, v, cls) {
     return '<div class="tile ' + (cls || "") + '"><div class="k">' + esc(k) + '</div><div class="v">' + v + "</div></div>";
+  }
+
+  // Status is the one view that re-reads on a timer, so it repaints only
+  // when something actually changed - otherwise an 8s tick would tear
+  // down the model button under whatever finger is on it.
+  let lastStatusSig = "";
+
+  function openStatus() {
+    renderStatus();
+    statusTimer = setInterval(() => {
+      if (document.visibilityState === "visible") renderStatus();
+    }, 8000);
   }
 
   async function renderStatus() {
     const body = document.getElementById("status-body");
     try {
       const s = await api("/api/status");
-      const pill = document.getElementById("target-pill");
-      document.getElementById("target-name").textContent = s.target || "claude";
-      pill.hidden = false;
-      pill.classList.add("live");
+      // every poll, not just the first - /target can change from the
+      // Telegram side while this app sits open
+      applyTarget(s.target);
+
+      const sig = JSON.stringify([s.model, s.effort, s.output_mode, s.cpu_c, s.gpu_c, s.fan, s.target]);
+      if (sig === lastStatusSig) return;
+      lastStatusSig = sig;
 
       const cpuHot = s.cpu_c != null && s.cpu_c >= 85;
       const gpuHot = s.gpu_c != null && s.gpu_c >= 85;
       body.innerHTML =
         '<div class="hero">' +
           '<div class="eyebrow">' + esc(s.target || "claude") + "</div>" +
-          '<div class="model">' + esc(s.model || "Unknown model") + "</div>" +
+          '<button class="model-tap" id="model-tap">' +
+            '<span class="model">' + esc(s.model || "Unknown model") + "</span>" +
+            '<span class="chev"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>' +
+          "</button>" +
           '<div class="meta">' + esc(s.effort || "default") + " effort &middot; " + esc(s.output_mode || "live") + " output</div>" +
         "</div>" +
         '<div class="tiles">' +
@@ -701,8 +1075,13 @@ INDEX_HTML = r"""<!doctype html>
           tile("Output", esc(s.output_mode || "live"), "muted") +
         "</div>" +
         '<div class="card"><div class="row"><span class="label">Effort</span><span class="value">' + esc(s.effort || "unknown") + "</span></div>" +
-        '<div class="row"><span class="label">Target app</span><span class="value">' + esc(s.target || "claude") + "</span></div></div>";
+        '<div class="row"><span class="label">Target app</span><span class="value">' + esc(s.target || "claude") + "</span></div>" +
+        '<div class="row"><span class="label">Tunnel</span><span class="value"><button class="btn ghost tiny" id="stop-tunnel-btn">Stop</button></span></div></div>';
+      wire("model-tap", openModelPicker);
+      wire("stop-tunnel-btn", stopTunnel);
     } catch (e) {
+      if (lastStatusSig === "__err") return;
+      lastStatusSig = "__err";
       body.innerHTML = emptyState("Couldn't load status", friendlyError(e), "retry-status");
       wire("retry-status", renderStatus);
     }
@@ -715,6 +1094,22 @@ INDEX_HTML = r"""<!doctype html>
   function wire(id, fn) {
     const el = document.getElementById(id);
     if (el) el.addEventListener("click", () => { haptic("light"); fn(); });
+  }
+
+  // Quick access from the very first screen this app shows - the same
+  // mini_app_enabled toggle Settings already has, just one tap closer
+  // for "I'm about to game, kill the tunnel now" instead of digging
+  // through a settings list.
+  async function stopTunnel() {
+    if (!confirm("Stop the Mini App tunnel? This shuts down remote access from any browser/phone until you turn it back on from the bot's /settings.")) return;
+    try {
+      await api("/api/settings", { method: "POST", body: { key: "mini_app_enabled", value: false } });
+      notifyHaptic("success");
+      toast("Tunnel stopped.");
+    } catch (e) {
+      toast(friendlyError(e), true);
+      notifyHaptic("error");
+    }
   }
 
   // ---- sessions ------------------------------------------------------
@@ -995,6 +1390,143 @@ INDEX_HTML = r"""<!doctype html>
     setTimeout(() => { if (note.textContent) noteText(""); }, 6000);
   }
 
+  // ---- command --------------------------------------------------------
+  /* Deliberately not a terminal emulator. This is the /cmd flow with a
+     touch surface on it: stage the command, look at the exact text you
+     staged, then confirm - the same friction /cmd has over Telegram,
+     for the same reason (real shell execution with the owner's own
+     privileges is the most dangerous thing this bot can do). The
+     backend audit-logs it identically and posts the result into the
+     Telegram chat either way, so nothing here is a side channel.
+     History is client-side only for this session - no endpoint reads it
+     back, it just survives tab switches. */
+  const cmdInput = document.getElementById("cmd-input");
+  const cmdRun = document.getElementById("cmd-run");
+  const cmdField = document.getElementById("cmd-field");
+  const cmdHistory = [];
+  let cmdSeq = 0;
+  let cmdBusy = false;
+
+  // cmdBusy covers both "staged, awaiting your confirm" and "actually
+  // running" - the server holds one staged slot, so a second Run must
+  // not be possible in either state. The spinner in the history row is
+  // what reports the run itself.
+  function syncRunBtn() {
+    cmdRun.disabled = cmdBusy || !cmdInput.value.trim();
+  }
+  cmdInput.addEventListener("input", syncRunBtn);
+  cmdInput.addEventListener("focus", () => cmdField.classList.add("focus"));
+  cmdInput.addEventListener("blur", () => cmdField.classList.remove("focus"));
+  cmdInput.addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter") { ev.preventDefault(); stageCmd(); }
+  });
+  cmdRun.addEventListener("click", stageCmd);
+
+  function renderCommand() {
+    paintCmd();
+    syncRunBtn();
+  }
+
+  function paintCmd() {
+    const el = document.getElementById("cmd-history");
+    if (!cmdHistory.length) {
+      el.innerHTML = emptyState("Nothing has run yet",
+        "Type a command above. You get a confirm step before anything executes.");
+      return;
+    }
+    el.innerHTML = cmdHistory.map((it) => {
+      const failed = it.state === "fail" || it.state === "error";
+      let body;
+      if (it.state === "running") {
+        body = '<div class="cmd-running"><span class="spin"></span>Running on your PC...</div>';
+      } else if (it.output) {
+        body = '<pre class="term">' + esc(it.output) + "</pre>";
+      } else {
+        body = '<pre class="term quiet">(finished with no output)</pre>';
+      }
+      const badge = it.state === "fail" ? '<div class="cmd-badge">exited with an error</div>'
+        : it.state === "error" ? '<div class="cmd-badge">didn\'t run</div>' : "";
+      return '<div class="cmd-item' + (failed ? " fail" : "") + '">' +
+        '<div class="cmd-head"><span class="c">' + esc(it.command) + "</span>" +
+        '<span class="ts">' + esc(stamp(it.at)) + "</span></div>" +
+        badge + body + "</div>";
+    }).join("");
+  }
+
+  async function stageCmd() {
+    const command = cmdInput.value.trim();
+    if (!command || cmdBusy) return;
+    cmdBusy = true;
+    syncRunBtn();
+    try {
+      await api("/api/cmd/stage", { method: "POST", body: { command: command } });
+    } catch (e) {
+      cmdBusy = false;
+      syncRunBtn();
+      toast(friendlyError(e), true);
+      notifyHaptic("error");
+      return;
+    }
+    haptic("medium");
+    cmdInput.blur();
+    openConfirmSheet(command);
+  }
+
+  function openConfirmSheet(command) {
+    openSheet({
+      title: "Run this?",
+      sub: "It runs on your PC with your own account's privileges.",
+      html: '<pre class="term">' + esc(command) + "</pre>" +
+        '<div class="sheet-actions">' +
+          '<button class="btn ghost" id="cmd-cancel">Cancel</button>' +
+          '<button class="btn danger" id="cmd-confirm">Run it</button>' +
+        "</div>",
+      // covers the scrim tap and Telegram's own back button too - the
+      // staged command must not be left sitting on the server
+      onDismiss: () => cancelStaged(),
+    });
+    document.getElementById("cmd-cancel").addEventListener("click", () => {
+      haptic("light");
+      closeSheet();
+    });
+    document.getElementById("cmd-confirm").addEventListener("click", () => runStaged(command));
+  }
+
+  async function cancelStaged() {
+    cmdBusy = false;
+    syncRunBtn();
+    try { await api("/api/cmd/cancel", { method: "POST" }); } catch (e) {}
+  }
+
+  async function runStaged(command) {
+    haptic("medium");
+    closeSheet(true);          // silent: don't fire the cancel path
+    const item = { id: ++cmdSeq, command: command, at: Date.now(), state: "running", output: "" };
+    cmdHistory.unshift(item);
+    if (cmdHistory.length > 20) cmdHistory.length = 20;
+    cmdInput.value = "";
+    syncRunBtn();
+    paintCmd();
+    document.getElementById("main").scrollTop = 0;
+
+    try {
+      const r = await api("/api/cmd/confirm", { method: "POST" });
+      // ok:false is the command itself failing - real output worth
+      // reading, just styled as a failure. Only a thrown error is a
+      // transport/server problem.
+      item.state = r && r.ok ? "ok" : "fail";
+      item.output = (r && r.output) || "";
+      notifyHaptic(item.state === "ok" ? "success" : "error");
+    } catch (e) {
+      item.state = "error";
+      item.output = friendlyError(e);
+      notifyHaptic("error");
+    }
+    cmdBusy = false;
+    syncRunBtn();
+    paintCmd();
+  }
+
   // ---- settings ------------------------------------------------------
   const WATCHER_TOGGLES = [
     ["dialog_watch_enabled", "Dialog alerts", "Tell me when a popup needs an answer"],
@@ -1104,7 +1636,8 @@ INDEX_HTML = r"""<!doctype html>
   }
 
   autogrow();
-  renderStatus();
+  syncRunBtn();
+  openStatus();
 })();
 </script>
 </body>
